@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CatherFlow — Gestão Clínica Inteligente</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --p1:#7c3aed;--p2:#6d28d9;--p3:#a855f7;--p4:#c4b5fd;
+  --bg:#0f0a1e;--bg2:#1a0f3a;--bg3:#2d1b6e;
+  --text:#fff;--text2:rgba(255,255,255,.85);--text3:rgba(255,255,255,.6);
+  --border:rgba(255,255,255,.1);--card:rgba(255,255,255,.04);
+  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.bg-orb{position:fixed;inset:0;z-index:0;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.2}
+.orb1{width:600px;height:600px;background:var(--p1);top:-200px;left:-200px}
+.orb2{width:400px;height:400px;background:var(--p2);bottom:-100px;right:-100px}
+
+/* LOGIN */
+#login-page{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{max-width:420px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:40px;backdrop-filter:blur(30px)}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo h1{font-size:24px;font-weight:800;margin-bottom:8px}
+.login-logo p{font-size:14px;color:var(--text3)}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.field input,.field select,.field textarea{width:100%;padding:13px 16px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:12px;color:var(--text);font:14px 'Plus Jakarta Sans';outline:none;transition:.2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--p1);background:rgba(124,58,237,.08);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.field textarea{resize:vertical;min-height:80px}
+.field select{cursor:pointer}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;font:700 14px 'Plus Jakarta Sans';cursor:pointer;transition:.2s;box-shadow:0 8px 32px rgba(124,58,237,.4)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 12px 40px rgba(124,58,237,.6)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.error{margin-top:12px;padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:var(--red);font-size:13px;text-align:center;display:none}
+.error.show{display:block}
+
+/* APP LAYOUT */
+#app{display:none;position:relative;z-index:1}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);backdrop-filter:blur(20px);padding:24px 16px;display:flex;flex-direction:column;z-index:10}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:36px;padding:0 8px}
+.logo-icon{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0}
+.logo-text strong{display:block;font-size:16px;font-weight:800}
+.logo-text span{font-size:11px;color:var(--text3);font-weight:600}
+.nav-section{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin:20px 0 6px;padding:0 8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:.2s;font-size:14px;font-weight:600;color:var(--text2);margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,.07)}
+.nav-item.active{background:rgba(124,58,237,.25);color:var(--p4);border:1px solid rgba(124,58,237,.3)}
+.nav-item svg{width:17px;height:17px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:rgba(124,58,237,.4);color:var(--p4);font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.user-card{margin-top:auto;padding:12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.2s}
+.user-card:hover{background:rgba(255,255,255,.08)}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:11px;color:var(--text3)}
+
+/* MAIN */
+.main{margin-left:240px;padding:32px 36px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:26px;font-weight:800}
+.hactions{display:flex;gap:10px}
+.btn-primary{padding:10px 18px;background:linear-gradient(135deg,var(--p1),var(--p2));border:none;border-radius:10px;color:#fff;font:700 13px 'Plus Jakarta Sans';cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.4);transition:.2s;white-space:nowrap}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,58,237,.5)}
+.btn-danger{padding:6px 12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:var(--red);font:600 12px 'Plus Jakarta Sans';cursor:pointer;transition:.2s}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-sm{padding:6px 12px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:var(--p4);font:600 12px 'Plus Jakarta Sans';cursor:pointer;transition:.2s}
+.btn-sm:hover{background:rgba(124,58,237,.35)}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;transition:.2s}
+.kpi-card:hover{border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.06)}
+.kpi-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:30px;font-weight:800;margin-bottom:4px}
+.kpi-sub{font-size:11px;font-weight:600;color:var(--text3)}
+.kpi-sub.up{color:var(--green)}.kpi-sub.down{color:var(--red)}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px}
+.card-title{font-size:15px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 12px;border-bottom:1px solid var(--border)}
+tbody td{padding:13px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+
+/* MODAL */
+.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.show{display:flex}
+.modal-box{max-width:580px;width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:22px;padding:28px;max-height:92vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.modal-title{font-size:18px;font-weight:800}
+.modal-close{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;width:30px;height:30px;border-radius:8px;transition:.2s;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:rgba(255,255,255,.1);color:var(--text)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-orange{background:rgba(245,158,11,.15);color:var(--orange)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-purple{background:rgba(124,58,237,.2);color:var(--p4)}
+
+/* UTILS */
+.empty{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty-icon{font-size:44px;margin-bottom:14px;opacity:.4}
+.loading{text-align:center;padding:48px 20px;color:var(--text3)}
+.spinner{border:3px solid var(--border);border-top-color:var(--p1);border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-hint{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--text3);line-height:1.5}
+.ai-hint strong{color:var(--p4)}
+
+/* CONFIG TABS */
+.cfg-tab{padding:8px 16px;border:none;border-radius:10px;font:600 13px 'Plus Jakarta Sans';cursor:pointer;background:transparent;color:var(--text3);transition:.2s}
+.cfg-tab:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.cfg-tab.active{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;box-shadow:0 4px 14px rgba(124,58,237,.4)}
+.tema-card{flex:1;max-width:120px;padding:12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:.2s;background:var(--card)}
+.tema-card:hover{border-color:rgba(124,58,237,.4)}
+.tema-card.active{border-color:var(--p1);background:rgba(124,58,237,.08)}
+.cor-btn:hover{transform:scale(1.15);border-color:white!important}
+.cor-btn.ativa{border-color:white!important;transform:scale(1.1)}
+/* LIGHT MODE */
+body.light .cfg-tab{color:#64748b}
+body.light .cfg-tab.active{color:#fff}
+body.light .tema-card{background:#fff;border-color:#e2e8f0}
+
+#toast{position:fixed;bottom:24px;right:24px;background:#22c55e;color:#fff;padding:13px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(34,197,94,.4);transition:opacity .4s;opacity:0;pointer-events:none}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="bg-orb"><div class="orb orb1"></div><div class="orb orb2"></div></div>
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════ LOGIN -->
+<div id="login-page">
+  <div class="login-box">
+    <div class="login-logo">
+      <div id="login-avatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;margin:0 auto 16px;border:3px solid rgba(124,58,237,.4);overflow:hidden">
+        <span id="login-avatar-ini">🧠</span>
+        <img id="login-foto" style="width:100%;height:100%;object-fit:cover;display:none" alt="">
+      </div>
+      <h1 id="login-title">CatherFlow</h1>
+      <p id="login-sub">Gestão clínica inteligente com IA</p>
+    </div>
+    <div id="form-login">
+      <div class="field"><label>E-mail</label><input type="email" id="email" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha</label><input type="password" id="senha" placeholder="••••••••"></div>
+      <div id="login-error" class="error"></div>
+      <button class="btn" onclick="login()">Entrar</button>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text3)">
+        Não tem conta? <a href="#" onclick="toggleForm();return false" style="color:var(--p3);font-weight:700">Criar grátis</a>
+      </p>
+    </div>
+    <div id="form-registro" style="display:none">
+      <div class="field"><label>Nome completo</label><input type="text" id="reg-nome" placeholder="Dr(a). Ana Silva"></div>
+      <div class="field"><label>CRP/CRN (opcional)</label><input type="text" id="reg-crp" placeholder="01/00000"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha (mín. 6 caracteres)</label><input type="password" id="reg-senha" placeholder="••••••••"></div>
+      <div id="reg-error" class="error"></div>
+      <button class="btn" onclick="registro()">Criar Conta Grátis</button>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text3)">
+        Já tem conta? <a href="#" onclick="toggleForm();return false" style="color:var(--p3);font-weight:700">Entrar</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ APP -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      <div class="logo-text"><strong>CatherFlow</strong><span>Gestão Clínica</span></div>
+    </div>
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="nav('dashboard',this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="nav('pacientes',this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Pacientes
+      <span class="nav-badge" id="badge-pacientes">0</span>
+    </div>
+    <div class="nav-item" onclick="nav('sessoes',this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+      Sessões
+    </div>
+    <div class="nav-item" onclick="nav('agenda',this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Agenda
+    </div>
+    <div class="nav-item" onclick="nav('relatorios',this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Relatórios
+    </div>
+    <div class="nav-section">Conta</div>
+    <div class="nav-item" onclick="nav('configuracoes',this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364-6.364l-4.243 4.243m0 6.364l4.243 4.243M6.636 6.636L10.88 10.88m0 6.364L6.636 17.364"/></svg>
+      Configurações
+    </div>
+    <div class="user-card" onclick="logout()">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name">Carregando...</div>
+        <div class="user-role" id="user-role">Sair</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ── DASHBOARD ──────────────────────────────────────── -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h1 id="greeting">Bom dia 👋</h1>
+        <div class="hactions">
+          <button class="btn-primary" onclick="abrirModalSessao()">+ Nova Sessão</button>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Pacientes Ativos</div><div class="kpi-value" id="kpi-pacientes">0</div><div class="kpi-sub up">Em acompanhamento</div></div>
+        <div class="kpi-card"><div class="kpi-label">Sessões Este Mês</div><div class="kpi-value" id="kpi-sessoes">0</div><div class="kpi-sub" id="kpi-sess-trend">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Faturamento do Mês</div><div class="kpi-value">R$<span id="kpi-fat">0</span></div><div class="kpi-sub" id="kpi-fat-trend">Este mês</div></div>
+        <div class="kpi-card"><div class="kpi-label">Próximo Agendamento</div><div class="kpi-value" style="font-size:22px" id="kpi-prox">--:--</div><div class="kpi-sub" id="kpi-prox-pac">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⏰ Sessões de Hoje</div>
+        <div id="dash-sessoes-hoje"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">👥 Pacientes Recentes</div>
+        <div id="dash-pacientes-recentes"></div>
+      </div>
+    </div>
+
+    <!-- ── PACIENTES ──────────────────────────────────────── -->
+    <div id="page-pacientes" class="page">
+      <div class="page-header">
+        <h1>Pacientes</h1>
+        <div class="hactions">
+          <button class="btn-primary" onclick="abrirModalPaciente()">+ Novo Paciente</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap"><div id="lista-pacientes"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── SESSÕES ─────────────────────────────────────────── -->
+    <div id="page-sessoes" class="page">
+      <div class="page-header">
+        <h1>Sessões Realizadas</h1>
+        <div class="hactions">
+          <button class="btn-primary" onclick="abrirModalSessao()">+ Nova Sessão</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap"><div id="lista-sessoes"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── AGENDA ─────────────────────────────────────────── -->
+    <div id="page-agenda" class="page">
+      <div class="page-header">
+        <h1>Agenda</h1>
+        <div class="hactions">
+          <button class="btn-primary" onclick="abrirModalAgenda()">+ Novo Agendamento</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap"><div id="lista-agenda"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── RELATÓRIOS ─────────────────────────────────────── -->
+    <div id="page-relatorios" class="page">
+      <div class="page-header">
+        <h1>Relatórios</h1>
+        <div class="hactions">
+          <button class="btn-primary" onclick="abrirModalRelatorio()">🤖 Gerar Relatório IA</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="area-relatorio">
+          <div class="empty"><div class="empty-icon">📄</div><p>Clique em "Gerar Relatório IA" para criar um relatório de acompanhamento</p></div>
+        </div>
+      </div>
+      <div class="card" id="card-hist-relatorios">
+        <div class="card-title">📋 Relatórios Gerados</div>
+        <div id="lista-relatorios"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ── CONFIGURAÇÕES ──────────────────────────────────── -->
+    <div id="page-configuracoes" class="page">
+      <div class="page-header">
+        <div>
+          <h1>⚙️ Configurações</h1>
+          <p style="font-size:13px;color:var(--text3);margin-top:4px">Personalize sua clínica e sistema</p>
+        </div>
+      </div>
+
+      <!-- ABAS -->
+      <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:5px;width:fit-content">
+        <button class="cfg-tab active" onclick="cfgTab('identidade',this)">👤 Identidade</button>
+        <button class="cfg-tab" onclick="cfgTab('visual',this)">🎨 Visual</button>
+        <button class="cfg-tab" onclick="cfgTab('sistema',this)">⚙️ Sistema</button>
+      </div>
+
+      <!-- ABA IDENTIDADE -->
+      <div id="cfg-identidade" class="cfg-panel">
+        <!-- Foto do profissional -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">🖼️ Foto do Profissional</div>
+          <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+            <div style="position:relative">
+              <div id="cfg-foto-preview" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;border:3px solid rgba(124,58,237,.4);overflow:hidden">
+                <span id="cfg-foto-inicial">?</span>
+                <img id="cfg-foto-img" style="width:100%;height:100%;object-fit:cover;display:none" alt="Foto">
+              </div>
+              <label for="cfg-foto-input" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--p1);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;border:2px solid var(--bg2)">📷</label>
+              <input type="file" id="cfg-foto-input" accept="image/*" style="display:none" onchange="previewFoto(this)">
+            </div>
+            <div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:4px" id="cfg-nome-preview">Seu nome aqui</div>
+              <div style="font-size:12px;color:var(--text3)" id="cfg-crp-preview">CRP 00/000000</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:8px">JPG ou PNG · Máx 2MB<br>Aparece no login e na sidebar</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dados da clínica + profissional -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card">
+            <div class="card-title">🏥 Dados da Clínica</div>
+            <div class="field"><label>Nome da Clínica</label><input type="text" id="cfg-clinica" placeholder="Ex: Clínica Mente Plena" oninput="atualizarPreview()"></div>
+            <div class="field">
+              <label>Tipo de Profissional</label>
+              <select id="cfg-tipo">
+                <option value="Psicóloga">Psicóloga</option>
+                <option value="Psicólogo">Psicólogo</option>
+                <option value="Nutricionista">Nutricionista</option>
+                <option value="Terapeuta">Terapeuta</option>
+                <option value="Fisioterapeuta">Fisioterapeuta</option>
+                <option value="Médico(a)">Médico(a)</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="field"><label>Bio / Descrição</label><textarea id="cfg-bio" placeholder="Uma breve descrição da sua clínica..." style="min-height:70px"></textarea></div>
+            <div class="field"><label>Endereço</label><input type="text" id="cfg-endereco" placeholder="Rua, número, cidade"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">👩‍⚕️ Dados da Profissional</div>
+            <div class="field"><label>Nome Completo</label><input type="text" id="cfg-nome" placeholder="Dra. Nome Sobrenome" oninput="atualizarPreview()"></div>
+            <div class="field"><label>Registro (CRP / CRN)</label><input type="text" id="cfg-registro" placeholder="CRP 00/000000" oninput="atualizarPreview()"></div>
+            <div class="field"><label>WhatsApp</label><input type="tel" id="cfg-whatsapp" placeholder="(31) 99999-9999"></div>
+            <div class="field"><label>Instagram</label><input type="text" id="cfg-instagram" placeholder="@suaclinica"></div>
+            <div class="field"><label>Site</label><input type="url" id="cfg-site" placeholder="www.suaclinica.com.br"></div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="salvarConfig()" style="width:auto;padding:12px 28px">💾 Salvar Identidade</button>
+      </div>
+
+      <!-- ABA VISUAL -->
+      <div id="cfg-visual" class="cfg-panel" style="display:none">
+        <div class="card" style="max-width:600px">
+          <div class="card-title">🎨 Aparência do Sistema</div>
+
+          <div style="margin-bottom:24px">
+            <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Tema</div>
+            <div style="display:flex;gap:12px">
+              <div class="tema-card active" id="tema-escuro" onclick="setTema('escuro')">
+                <div style="width:100%;height:48px;background:linear-gradient(135deg,#0f0a1e,#1a0f3a);border-radius:8px;margin-bottom:8px;border:2px solid var(--p1)"></div>
+                <div style="font-size:12px;font-weight:700;text-align:center">🌙 Escuro</div>
+              </div>
+              <div class="tema-card" id="tema-claro" onclick="setTema('claro')">
+                <div style="width:100%;height:48px;background:linear-gradient(135deg,#f8fafc,#e2e8f0);border-radius:8px;margin-bottom:8px;border:2px solid var(--border)"></div>
+                <div style="font-size:12px;font-weight:700;text-align:center">☀️ Claro</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:24px">
+            <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Cor de Destaque</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              ${[
+                ['#7c3aed','Roxo (padrão)'],
+                ['#2563eb','Azul'],
+                ['#059669','Verde'],
+                ['#dc2626','Vermelho'],
+                ['#d97706','Âmbar'],
+                ['#db2777','Rosa'],
+              ].map(([cor,nome])=>`
+                <div onclick="setCorDestaque('${cor}')" title="${nome}"
+                  style="width:36px;height:36px;border-radius:50%;background:${cor};cursor:pointer;border:3px solid transparent;transition:.2s"
+                  class="cor-btn" data-cor="${cor}">
+                </div>`).join('')}
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="salvarVisual()" style="width:auto;padding:12px 28px">💾 Salvar Visual</button>
+        </div>
+      </div>
+
+      <!-- ABA SISTEMA -->
+      <div id="cfg-sistema" class="cfg-panel" style="display:none">
+        <div class="card" style="max-width:600px">
+          <div class="card-title">⚙️ Configurações do Sistema</div>
+          <div class="field"><label>Valor Padrão da Sessão (R$)</label><input type="number" id="cfg-valor" placeholder="150.00" step="0.01"></div>
+          <div class="field">
+            <label>Duração Padrão da Sessão</label>
+            <select id="cfg-duracao">
+              <option value="45">45 minutos</option>
+              <option value="50">50 minutos</option>
+              <option value="60" selected>60 minutos</option>
+              <option value="90">90 minutos</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Notificações de Lembrete</label>
+            <select id="cfg-notif">
+              <option value="desativado">Desativado</option>
+              <option value="1h">1 hora antes</option>
+              <option value="24h" selected>24 horas antes</option>
+              <option value="48h">48 horas antes</option>
+            </select>
+          </div>
+          <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:14px;margin-bottom:16px">
+            <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">🔗 Webhooks N8N</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.8">
+              Sessão: <code style="color:var(--p4);font-size:10px">catherflow/registrar-sessao</code><br>
+              Relatório: <code style="color:var(--p4);font-size:10px">catherflow/gerar-relatorio</code><br>
+              Paciente: <code style="color:var(--p4);font-size:10px">catherflow/cadastrar-paciente</code>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="salvarSistema()" style="width:auto;padding:12px 28px">💾 Salvar Sistema</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════ MODAIS -->
+
+<!-- MODAL PACIENTE -->
+<div id="modal-paciente" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">👤 Novo Paciente</div>
+      <button class="modal-close" onclick="fecharModal('modal-paciente')">×</button>
+    </div>
+    <div class="field"><label>Nome Completo *</label><input type="text" id="pac-nome" placeholder="Nome do paciente"></div>
+    <div class="grid-2">
+      <div class="field"><label>Telefone</label><input type="tel" id="pac-tel" placeholder="(00) 00000-0000"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="pac-email" placeholder="paciente@email.com"></div>
+    </div>
+    <div class="field"><label>Queixa Inicial</label><textarea id="pac-queixa" placeholder="Motivo principal que trouxe o paciente ao atendimento..."></textarea></div>
+    <button class="btn" id="btn-salvar-pac" onclick="salvarPaciente()">Salvar Paciente</button>
+  </div>
+</div>
+
+<!-- MODAL SESSÃO -->
+<div id="modal-sessao" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📋 Registrar Sessão</div>
+      <button class="modal-close" onclick="fecharModal('modal-sessao')">×</button>
+    </div>
+    <div class="field"><label>Paciente *</label><select id="sess-pac"></select></div>
+    <div class="field"><label>Data *</label><input type="date" id="sess-data"></div>
+    <div class="field"><label>Queixas Principais</label><textarea id="sess-queixas" placeholder="O que o paciente trouxe nesta sessão..."></textarea></div>
+    <div class="field"><label>Intervenções Realizadas</label><textarea id="sess-intervencoes" placeholder="Técnicas e abordagens utilizadas..."></textarea></div>
+    <div class="field"><label>Evolução Observada</label><textarea id="sess-evolucao" placeholder="Progressos ou retrocessos observados..."></textarea></div>
+    <div class="field"><label>Pontos de Atenção</label><textarea id="sess-atencao" placeholder="Aspectos que merecem acompanhamento..."></textarea></div>
+    <div class="field"><label>Próximos Passos</label><textarea id="sess-proximos" placeholder="Encaminhamentos para as próximas sessões..."></textarea></div>
+    <div class="grid-2">
+      <div class="field"><label>Valor (R$)</label><input type="number" id="sess-valor" step="0.01" placeholder="150.00"></div>
+      <div class="field"><label>Status Pagamento</label>
+        <select id="sess-status"><option value="pendente">Pendente</option><option value="pago">Pago</option></select>
+      </div>
+    </div>
+    <div class="ai-hint">🤖 <strong>Resumo IA automático:</strong> ao salvar, a IA gera uma análise clínica desta sessão. Aguarde ~10 segundos.</div>
+    <button class="btn" id="btn-salvar-sess" onclick="salvarSessao()">Salvar Sessão</button>
+  </div>
+</div>
+
+<!-- MODAL AGENDA -->
+<div id="modal-agenda" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📅 Novo Agendamento</div>
+      <button class="modal-close" onclick="fecharModal('modal-agenda')">×</button>
+    </div>
+    <div class="field"><label>Paciente *</label><select id="ag-pac"></select></div>
+    <div class="grid-2">
+      <div class="field"><label>Data *</label><input type="date" id="ag-data"></div>
+      <div class="field"><label>Horário *</label><input type="time" id="ag-hora" value="14:00"></div>
+    </div>
+    <div class="field"><label>Status</label>
+      <select id="ag-status"><option value="agendado">Agendado</option><option value="confirmado">Confirmado</option><option value="cancelado">Cancelado</option></select>
+    </div>
+    <div class="field"><label>Link Videochamada (opcional)</label><input type="url" id="ag-link" placeholder="https://meet.google.com/..."></div>
+    <button class="btn" id="btn-salvar-ag" onclick="salvarAgendamento()">Salvar Agendamento</button>
+  </div>
+</div>
+
+<!-- MODAL RELATÓRIO -->
+<div id="modal-relatorio" class="modal">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title">📄 Gerar Relatório IA</div>
+      <button class="modal-close" onclick="fecharModal('modal-relatorio')">×</button>
+    </div>
+    <div class="field"><label>Paciente *</label><select id="rel-pac"></select></div>
+    <div class="field"><label>Período</label>
+      <select id="rel-periodo" onchange="togglePeriodoCustom()">
+        <option value="mes">Último mês</option>
+        <option value="trimestre">Últimos 3 meses</option>
+        <option value="semestre">Últimos 6 meses</option>
+        <option value="ano">Último ano</option>
+        <option value="tudo">Todo o histórico</option>
+        <option value="custom">Personalizado</option>
+      </select>
+    </div>
+    <div id="periodo-custom" style="display:none">
+      <div class="grid-2">
+        <div class="field"><label>Data Início</label><input type="date" id="rel-inicio"></div>
+        <div class="field"><label>Data Fim</label><input type="date" id="rel-fim"></div>
+      </div>
+    </div>
+    <div class="ai-hint">🤖 <strong>IA analisa todas as sessões do período</strong> e gera relatório com 6 seções clínicas + histórico completo. Tempo estimado: ~15 segundos.</div>
+    <button class="btn" id="btn-gerar-rel" onclick="confirmarGerarRelatorio()">Gerar Relatório</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SCRIPT -->
+<script>
+// ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
+const SB  = 'https://vsygwhbjadiistfewffz.supabase.co';
+const SK  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzeWd3aGJqYWRpaXN0ZmV3ZmZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0ODQ0MzUsImV4cCI6MjA4MTA2MDQzNX0.DKYHcL_IyrM_OomV1FCazED0_9oWV_P-R_LnhvjpCUo';
+const N8N = 'https://mountainousmonitorlizard-n8n.cloudfy.live/webhook/catherflow';
+const WH  = {
+  sessao   : `${N8N}/registrar-sessao`,
+  relatorio: `${N8N}/gerar-relatorio`,
+  paciente : `${N8N}/cadastrar-paciente`,
+};
+// Tabelas
+const TP = 't3_pacientes', TS = 't4_sessoes', TR = 't5_relatorios', TA = 't6_agenda';
+
+// ── SEGURANÇA: token secreto para autenticar chamadas ao N8N ─────────────────
+// Este token deve ser idêntico ao configurado no N8N (Header Auth)
+const CF_SECRET = 'cf_wh_2026_xK9mP3rT8qL5nV2j';
+
+// Helper seguro para chamar webhooks N8N
+// — envia o JWT do Supabase + secret fixo
+// — o N8N valida AMBOS antes de processar
+async function whFetch(url, body){
+  if(!token) throw new Error('Não autenticado');
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type'       : 'application/json',
+      'x-cf-secret'        : CF_SECRET,           // segredo fixo
+      'x-cf-token'         : token,               // JWT do usuário logado
+    },
+    body: JSON.stringify(body)
+  });
+  if(!r.ok){
+    const err = await r.json().catch(()=>({}));
+    throw new Error(err.mensagem||err.error||`Erro ${r.status}`);
+  }
+  return r.json();
+}
+
+let token=null, user=null, pacientes=[], sessoes=[], agenda=[];
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+async function login(){
+  const email=document.getElementById('email').value.trim();
+  const senha=document.getElementById('senha').value;
+  const err=document.getElementById('login-error');
+  err.classList.remove('show');
+  if(!email||!senha){err.textContent='Preencha e-mail e senha';err.classList.add('show');return}
+  const btn=document.querySelector('#form-login .btn');
+  btn.disabled=true; btn.textContent='Entrando...';
+  try{
+    const r=await fetch(`${SB}/auth/v1/token?grant_type=password`,{
+      method:'POST', headers:{'apikey':SK,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:senha})
+    });
+    const d=await r.json();
+    if(!r.ok){err.textContent='E-mail ou senha incorretos';err.classList.add('show');return}
+    token=d.access_token; user=d.user;
+    localStorage.setItem('cf_token',token);
+    localStorage.setItem('cf_user',JSON.stringify(user));
+    iniciarApp();
+  }catch(e){err.textContent='Erro de conexão';err.classList.add('show')}
+  finally{btn.disabled=false;btn.textContent='Entrar'}
+}
+
+async function registro(){
+  const nome=document.getElementById('reg-nome').value.trim();
+  const crp=document.getElementById('reg-crp').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const senha=document.getElementById('reg-senha').value;
+  const err=document.getElementById('reg-error');
+  err.classList.remove('show');
+  if(!nome||!email||!senha){err.textContent='Preencha todos os campos';err.classList.add('show');return}
+  if(senha.length<6){err.textContent='Senha mín. 6 caracteres';err.classList.add('show');return}
+  const btn=document.querySelector('#form-registro .btn');
+  btn.disabled=true; btn.textContent='Criando conta...';
+  try{
+    const r=await fetch(`${SB}/auth/v1/signup`,{
+      method:'POST', headers:{'apikey':SK,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:senha,data:{nome,crp}})
+    });
+    const d=await r.json();
+    if(!r.ok){err.textContent=d.error_description||'Erro ao criar conta';err.classList.add('show');return}
+    if(d.access_token){
+      token=d.access_token; user=d.user;
+      localStorage.setItem('cf_token',token);
+      localStorage.setItem('cf_user',JSON.stringify(user));
+      iniciarApp();
+    } else {
+      err.style.color='var(--green)';
+      err.textContent='✓ Conta criada! Verifique seu e-mail para confirmar.';
+      err.classList.add('show');
+    }
+  }catch(e){err.textContent='Erro de conexão';err.classList.add('show')}
+  finally{btn.disabled=false;btn.textContent='Criar Conta Grátis'}
+}
+
+function logout(){
+  if(!confirm('Deseja sair?'))return;
+  localStorage.removeItem('cf_token'); localStorage.removeItem('cf_user');
+  token=null; user=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+}
+
+function toggleForm(){
+  const l=document.getElementById('form-login'), r=document.getElementById('form-registro');
+  l.style.display=l.style.display==='none'?'block':'none';
+  r.style.display=r.style.display==='none'?'block':'none';
+}
+
+// ── INICIALIZAR APP ───────────────────────────────────────────────────────────
+function iniciarApp(){
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='block';
+  const nome=(user.user_metadata?.nome||user.email.split('@')[0]).split(' ')[0];
+  const h=new Date().getHours();
+  document.getElementById('greeting').textContent=`${h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}, ${nome} 👋`;
+  document.getElementById('user-avatar').textContent=nome[0].toUpperCase();
+  document.getElementById('user-name').textContent=user.user_metadata?.nome||nome;
+  document.getElementById('user-role').textContent=user.user_metadata?.crp?`CRP ${user.user_metadata.crp}`:'Clique para sair';
+  carregarTudo();
+  carregarFotoDoSupabase();
+}
+
+async function carregarTudo(){
+  await Promise.all([carregarPacientes(),carregarSessoes(),carregarAgenda()]);
+  renderDashboard(); renderPacientes(); renderSessoes(); renderAgenda();
+}
+
+// ── CARREGAR DADOS (Supabase direto para leitura) ─────────────────────────────
+async function carregarPacientes(){
+  try{
+    const r=await fetch(`${SB}/rest/v1/${TP}?select=*&order=nome`,{
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    pacientes=await r.json();
+    if(!Array.isArray(pacientes)) pacientes=[];
+    document.getElementById('badge-pacientes').textContent=pacientes.filter(p=>p.ativo!==false).length;
+  }catch(e){pacientes=[];console.error(e)}
+}
+
+async function carregarSessoes(){
+  try{
+    const r=await fetch(`${SB}/rest/v1/${TS}?select=*&order=data_sessao.desc`,{
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    sessoes=await r.json();
+    if(!Array.isArray(sessoes)) sessoes=[];
+  }catch(e){sessoes=[];console.error(e)}
+}
+
+async function carregarAgenda(){
+  try{
+    const r=await fetch(`${SB}/rest/v1/${TA}?select=*&order=data,hora`,{
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    agenda=await r.json();
+    if(!Array.isArray(agenda)) agenda=[];
+  }catch(e){agenda=[];console.error(e)}
+}
+
+async function carregarRelatorios(){
+  try{
+    const r=await fetch(`${SB}/rest/v1/${TR}?select=*&order=created_at.desc&limit=10`,{
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    const data=await r.json();
+    renderListaRelatorios(Array.isArray(data)?data:[]);
+  }catch(e){console.error(e)}
+}
+
+// ── RENDERS ───────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const hoje=new Date().toISOString().split('T')[0];
+  const mes=new Date().toISOString().substring(0,7);
+  // KPIs
+  document.getElementById('kpi-pacientes').textContent=pacientes.filter(p=>p.ativo!==false).length;
+  const sessM=sessoes.filter(s=>s.data_sessao?.startsWith(mes));
+  document.getElementById('kpi-sessoes').textContent=sessM.length;
+  const fat=sessM.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  document.getElementById('kpi-fat').textContent=fat.toFixed(0);
+  // Próximo agendamento
+  const prox=agenda.filter(a=>a.data>=hoje&&a.status!=='cancelado').sort((a,b)=>a.data===b.data?a.hora?.localeCompare(b.hora||''):a.data.localeCompare(b.data))[0];
+  if(prox){
+    const pac=pacientes.find(p=>p.id==prox.paciente_id);
+    document.getElementById('kpi-prox').textContent=prox.hora?.substring(0,5)||'--:--';
+    document.getElementById('kpi-prox-pac').textContent=pac?.nome||'—';
+  }
+  // Sessões hoje
+  const sessH=sessoes.filter(s=>s.data_sessao===hoje);
+  const dH=document.getElementById('dash-sessoes-hoje');
+  if(!sessH.length){
+    dH.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>Nenhuma sessão registrada hoje</p></div>';
+  } else {
+    dH.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Paciente</th><th>Queixas</th><th>Status Pgto</th></tr></thead><tbody>${
+      sessH.map(s=>{const p=pacientes.find(x=>x.id==s.paciente_id);
+        return`<tr><td><strong>${p?.nome||'—'}</strong></td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td><td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  }
+  // Pacientes recentes
+  const dP=document.getElementById('dash-pacientes-recentes');
+  const pacsR=pacientes.slice(0,5);
+  if(!pacsR.length){
+    dP.innerHTML='<div class="empty"><div class="empty-icon">👥</div><p>Nenhum paciente cadastrado ainda</p></div>';
+  } else {
+    dP.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>Última Sessão</th><th>Total Sessões</th></tr></thead><tbody>${
+      pacsR.map(p=>{
+        const ss=sessoes.filter(s=>s.paciente_id==p.id);
+        const ult=ss[0];
+        return`<tr><td><strong>${p.nome}</strong></td><td>${p.telefone||'—'}</td><td>${ult?fmtDate(ult.data_sessao):'Nunca'}</td><td>${ss.length}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  }
+}
+
+function renderPacientes(){
+  const div=document.getElementById('lista-pacientes');
+  if(!pacientes.length){
+    div.innerHTML='<div class="empty"><div class="empty-icon">👥</div><p>Nenhum paciente cadastrado</p></div>';return;
+  }
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Queixa Inicial</th><th>Sessões</th><th>Ações</th></tr></thead><tbody>${
+    pacientes.map(p=>{
+      const total=sessoes.filter(s=>s.paciente_id==p.id).length;
+      return`<tr>
+        <td><strong>${p.nome}</strong></td>
+        <td>${p.telefone||'—'}</td>
+        <td>${p.email||'—'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3)">${p.queixa_inicial||'—'}</td>
+        <td><span class="badge badge-purple">${total}</span></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="abrirModalSessaoParaPaciente(${p.id})">+ Sessão</button>
+          <button class="btn-danger" onclick="excluirPaciente(${p.id},'${p.nome.replace(/'/g,"\\'")}')">Excluir</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function renderSessoes(){
+  const div=document.getElementById('lista-sessoes');
+  if(!sessoes.length){
+    div.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';return;
+  }
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Paciente</th><th>Queixas</th><th>Evolução</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
+    sessoes.slice(0,30).map(s=>{
+      const p=pacientes.find(x=>x.id==s.paciente_id);
+      return`<tr>
+        <td>${fmtDate(s.data_sessao)}</td>
+        <td><strong>${p?.nome||'—'}</strong></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.evolucao||'—'}</td>
+        <td>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
+        <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function renderAgenda(){
+  const div=document.getElementById('lista-agenda');
+  const hoje=new Date().toISOString().split('T')[0];
+  const futuros=agenda.filter(a=>a.data>=hoje&&a.status!=='cancelado').slice(0,30);
+  if(!futuros.length){
+    div.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>Nenhum agendamento futuro</p></div>';return;
+  }
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Status</th><th>Link</th><th>Ações</th></tr></thead><tbody>${
+    futuros.map(a=>{
+      const p=pacientes.find(x=>x.id==a.paciente_id);
+      return`<tr>
+        <td>${fmtDate(a.data)}</td>
+        <td>${a.hora?.substring(0,5)||'—'}</td>
+        <td><strong>${p?.nome||'—'}</strong></td>
+        <td><span class="badge badge-${a.status==='confirmado'?'green':a.status==='cancelado'?'red':'orange'}">${a.status||'agendado'}</span></td>
+        <td>${a.link_videochamada?`<a href="${a.link_videochamada}" target="_blank" style="color:var(--p3);font-size:12px">Abrir link</a>`:'—'}</td>
+        <td><button class="btn-danger" onclick="excluirAgendamento(${a.id})">Excluir</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function renderListaRelatorios(data){
+  const div=document.getElementById('lista-relatorios');
+  if(!data.length){div.innerHTML='<div class="empty"><div class="empty-icon">📄</div><p>Nenhum relatório salvo</p></div>';return;}
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Paciente</th><th>Gerado em</th><th>Tokens</th><th>Ação</th></tr></thead><tbody>${
+    data.map(r=>{
+      const p=pacientes.find(x=>x.id==r.paciente_id);
+      return`<tr>
+        <td><strong>${p?.nome||'Paciente #'+r.paciente_id}</strong></td>
+        <td>${fmtDate(r.created_at?.split('T')[0])}</td>
+        <td>${r.tokens_usados||'—'}</td>
+        <td><button class="btn-sm" onclick="verRelatorio(${r.id})">Ver / Imprimir</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  window._relatoriosSalvos=data;
+}
+
+// ── ABRIR MODAIS ──────────────────────────────────────────────────────────────
+function abrirModalPaciente(){
+  ['pac-nome','pac-tel','pac-email','pac-queixa'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modal-paciente').classList.add('show');
+}
+
+function abrirModalSessao(){
+  const sel=document.getElementById('sess-pac');
+  sel.innerHTML=pacientes.length?pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join(''):'<option value="">Cadastre um paciente primeiro</option>';
+  document.getElementById('sess-data').value=new Date().toISOString().split('T')[0];
+  ['sess-queixas','sess-intervencoes','sess-evolucao','sess-atencao','sess-proximos'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sess-valor').value='';
+  document.getElementById('sess-status').value='pendente';
+  document.getElementById('modal-sessao').classList.add('show');
+}
+
+function abrirModalSessaoParaPaciente(pacId){
+  abrirModalSessao();
+  document.getElementById('sess-pac').value=pacId;
+}
+
+function abrirModalAgenda(){
+  const sel=document.getElementById('ag-pac');
+  sel.innerHTML=pacientes.length?pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join(''):'<option value="">Cadastre um paciente primeiro</option>';
+  document.getElementById('ag-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('ag-hora').value='14:00';
+  document.getElementById('ag-status').value='agendado';
+  document.getElementById('ag-link').value='';
+  document.getElementById('modal-agenda').classList.add('show');
+}
+
+function abrirModalRelatorio(){
+  if(!pacientes.length){toast('Cadastre um paciente primeiro','orange');return}
+  const sel=document.getElementById('rel-pac');
+  sel.innerHTML=pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  document.getElementById('rel-periodo').value='mes';
+  document.getElementById('periodo-custom').style.display='none';
+  const hoje=new Date();
+  document.getElementById('rel-fim').value=hoje.toISOString().split('T')[0];
+  const ini=new Date(hoje); ini.setMonth(ini.getMonth()-1);
+  document.getElementById('rel-inicio').value=ini.toISOString().split('T')[0];
+  document.getElementById('modal-relatorio').classList.add('show');
+}
+
+function togglePeriodoCustom(){
+  document.getElementById('periodo-custom').style.display=
+    document.getElementById('rel-periodo').value==='custom'?'block':'none';
+}
+
+function fecharModal(id){document.getElementById(id).classList.remove('show')}
+
+// ── SALVAR PACIENTE (via N8N) ─────────────────────────────────────────────────
+async function salvarPaciente(){
+  const nome=document.getElementById('pac-nome').value.trim();
+  if(!nome){toast('Preencha o nome do paciente','red');return}
+  const btn=document.getElementById('btn-salvar-pac');
+  btn.disabled=true; btn.textContent='Salvando...';
+  try{
+    const d=await whFetch(WH.paciente,{
+      user_id:user.id, nome,
+      telefone:document.getElementById('pac-tel').value.trim(),
+      email:document.getElementById('pac-email').value.trim(),
+      queixa_inicial:document.getElementById('pac-queixa').value.trim()
+    });
+    if(!d.success) throw new Error(d.mensagem||'Erro');
+    fecharModal('modal-paciente');
+    toast('✅ Paciente cadastrado com sucesso!');
+    await carregarPacientes();
+    renderDashboard(); renderPacientes();
+  }catch(e){toast('Erro: '+e.message,'red')}
+  finally{btn.disabled=false;btn.textContent='Salvar Paciente'}
+}
+
+// ── EXCLUIR PACIENTE (Supabase direto) ────────────────────────────────────────
+async function excluirPaciente(id,nome){
+  if(!confirm(`Excluir "${nome}"? Isso também apagará todas as sessões deste paciente.`))return;
+  try{
+    await fetch(`${SB}/rest/v1/${TP}?id=eq.${id}`,{
+      method:'DELETE',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    toast('Paciente excluído.');
+    await carregarPacientes(); await carregarSessoes();
+    renderDashboard(); renderPacientes(); renderSessoes();
+  }catch(e){toast('Erro ao excluir','red')}
+}
+
+// ── SALVAR SESSÃO (via N8N → IA) ──────────────────────────────────────────────
+async function salvarSessao(){
+  const pacId=document.getElementById('sess-pac').value;
+  if(!pacId){toast('Selecione um paciente','red');return}
+  const btn=document.getElementById('btn-salvar-sess');
+  btn.disabled=true; btn.textContent='⏳ Gerando resumo IA...';
+  try{
+    const d=await whFetch(WH.sessao,{
+      user_id:user.id,
+      paciente_id:parseInt(pacId),
+      data_sessao:document.getElementById('sess-data').value,
+      queixas_principais:document.getElementById('sess-queixas').value.trim(),
+      intervencoes:document.getElementById('sess-intervencoes').value.trim(),
+      evolucao:document.getElementById('sess-evolucao').value.trim(),
+      pontos_atencao:document.getElementById('sess-atencao').value.trim(),
+      proximos_passos:document.getElementById('sess-proximos').value.trim(),
+      valor:parseFloat(document.getElementById('sess-valor').value)||null,
+      status_pagamento:document.getElementById('sess-status').value
+    });
+    if(!d.success) throw new Error(d.mensagem||'Erro');
+    fecharModal('modal-sessao');
+    toast('✅ Sessão salva com resumo IA gerado!');
+    await carregarSessoes();
+    renderDashboard(); renderSessoes();
+  }catch(e){toast('Erro: '+e.message,'red')}
+  finally{btn.disabled=false;btn.textContent='Salvar Sessão'}
+}
+
+// ── SALVAR AGENDAMENTO (Supabase direto) ──────────────────────────────────────
+async function salvarAgendamento(){
+  const pacId=document.getElementById('ag-pac').value;
+  if(!pacId){toast('Selecione um paciente','red');return}
+  const btn=document.getElementById('btn-salvar-ag');
+  btn.disabled=true; btn.textContent='Salvando...';
+  try{
+    const r=await fetch(`${SB}/rest/v1/${TA}`,{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({
+        user_id:user.id,
+        paciente_id:parseInt(pacId),
+        data:document.getElementById('ag-data').value,
+        hora:document.getElementById('ag-hora').value+':00',
+        status:document.getElementById('ag-status').value,
+        link_videochamada:document.getElementById('ag-link').value||null,
+        confirmado:document.getElementById('ag-status').value==='confirmado'
+      })
+    });
+    if(!r.ok) throw new Error('Erro ao salvar');
+    fecharModal('modal-agenda');
+    toast('✅ Agendamento criado!');
+    await carregarAgenda();
+    renderDashboard(); renderAgenda();
+  }catch(e){toast('Erro: '+e.message,'red')}
+  finally{btn.disabled=false;btn.textContent='Salvar Agendamento'}
+}
+
+// ── EXCLUIR AGENDAMENTO ───────────────────────────────────────────────────────
+async function excluirAgendamento(id){
+  if(!confirm('Excluir este agendamento?'))return;
+  try{
+    await fetch(`${SB}/rest/v1/${TA}?id=eq.${id}`,{
+      method:'DELETE',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    toast('Agendamento excluído.');
+    await carregarAgenda(); renderAgenda();
+  }catch(e){toast('Erro ao excluir','red')}
+}
+
+// ── GERAR RELATÓRIO (via N8N → IA) ───────────────────────────────────────────
+async function confirmarGerarRelatorio(){
+  const pacId=document.getElementById('rel-pac').value;
+  const pac=pacientes.find(p=>String(p.id)===String(pacId));
+  if(!pac){toast('Selecione um paciente','red');return}
+  const periodo=document.getElementById('rel-periodo').value;
+  const hoje=new Date();
+  let dataInicio, dataFim=hoje.toISOString().split('T')[0];
+  if(periodo==='custom'){
+    dataInicio=document.getElementById('rel-inicio').value;
+    dataFim=document.getElementById('rel-fim').value;
+    if(!dataInicio||!dataFim){toast('Preencha as datas','red');return}
+  } else {
+    const mMap={mes:1,trimestre:3,semestre:6,ano:12,tudo:120};
+    if(periodo==='tudo'){dataInicio='2000-01-01';}
+    else{const d=new Date(hoje);d.setMonth(d.getMonth()-mMap[periodo]);dataInicio=d.toISOString().split('T')[0];}
+  }
+  const btn=document.getElementById('btn-gerar-rel');
+  btn.disabled=true; btn.textContent='⏳ Gerando...';
+  fecharModal('modal-relatorio');
+  // Garante que está na aba de relatórios
+  nav('relatorios',document.querySelector('.nav-item:nth-child(6)'));
+  document.getElementById('area-relatorio').innerHTML='<div class="loading"><div class="spinner"></div><p>🤖 IA analisando sessões e gerando relatório... ~15s</p></div>';
+  try{
+    const d=await whFetch(WH.relatorio,{
+      user_id:user.id,paciente_id:pac.id,
+      tipo:'acompanhamento',data_inicio:dataInicio,data_fim:dataFim
+    });
+    if(!d.success) throw new Error(d.mensagem||'Erro ao gerar relatório');
+    const s=d.secoes||{};
+    const hist=d.historico_sessoes||[];
+    const periodoLabel={mes:'Último mês',trimestre:'Últimos 3 meses',semestre:'Últimos 6 meses',ano:'Último ano',tudo:'Todo o histórico',custom:'Período personalizado'}[periodo];
+    window._relAtual={...d, periodoLabel, pac};
+    document.getElementById('area-relatorio').innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:17px;font-weight:800">${d.paciente}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">${periodoLabel} · ${d.total_sessoes} sessões analisadas</div>
+        </div>
+        <button class="btn-primary" onclick="imprimirRelatorio()">🖨️ Imprimir PDF</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        ${[['Visão Geral',s.s1_visao_geral],['O que Melhorou',s.s2_melhorou],['O que Persiste',s.s3_persiste],['O que Foi Solucionado',s.s4_solucionado]].map(([t,c])=>`
+          <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.12);border-radius:12px;padding:14px">
+            <div style="font-size:10px;font-weight:700;color:var(--p3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">${t}</div>
+            <div style="font-size:12px;line-height:1.7;color:var(--text2)">${c||'—'}</div>
+          </div>`).join('')}
+      </div>
+      ${s.s5_intervencoes?.length?`<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--p3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Intervenções</div><ul style="padding-left:18px">${s.s5_intervencoes.map(i=>`<li style="font-size:12px;line-height:1.8;color:var(--text2)">${i}</li>`).join('')}</ul></div>`:''}
+      ${s.s6_recomendacoes?.length?`<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--p3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Recomendações</div><ul style="padding-left:18px">${s.s6_recomendacoes.map(i=>`<li style="font-size:12px;line-height:1.8;color:var(--text2)">${i}</li>`).join('')}</ul></div>`:''}
+      ${hist.length?`<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px"><div style="font-weight:700;font-size:13px;margin-bottom:12px">Histórico de Sessões</div>${hist.map(h=>`
+        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px">
+          <div style="font-weight:700;font-size:12px;color:var(--p4);margin-bottom:6px">Sessão ${h.sessao} — ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
+          ${h.resumo_ia?`<div style="font-size:12px;color:var(--text2);line-height:1.6;background:rgba(34,197,94,.06);border-radius:8px;padding:10px;border:1px solid rgba(34,197,94,.2)">🤖 ${h.resumo_ia}</div>`:''}
+        </div>`).join('')}</div>`:''}
+    `;
+    toast('✅ Relatório gerado com sucesso!');
+    await carregarRelatorios();
+  }catch(e){
+    document.getElementById('area-relatorio').innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+    toast('Erro: '+e.message,'red');
+  }
+  finally{btn.disabled=false;btn.textContent='Gerar Relatório'}
+}
+
+function verRelatorio(id){
+  const rel=window._relatoriosSalvos?.find(r=>r.id===id);
+  if(!rel?.conteudo_html){toast('Conteúdo não disponível','orange');return}
+  const w=window.open('','_blank');
+  w.document.write(rel.conteudo_html);
+  w.document.close();
+  setTimeout(()=>w.print(),800);
+}
+
+function imprimirRelatorio(){
+  if(!window._relAtual){toast('Nenhum relatório gerado','orange');return}
+  const d=window._relAtual; const s=d.secoes||{}; const hist=d.historico_sessoes||[];
+  const profNome=user.user_metadata?.nome||user.email;
+  const crp=user.user_metadata?.crp?`CRP: ${user.user_metadata.crp}`:'';
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório — ${d.paciente}</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b}
+  .hdr{background:#5b21b6;color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #f97316}
+  .hdr-brand{font-size:18px;font-weight:800}.hdr-sub{font-size:9px;opacity:.8;margin-top:2px}.hdr-date{font-size:10px;opacity:.8}
+  .meta{background:#f5f3ff;padding:12px 28px;display:flex;gap:32px;border-bottom:1.5px solid #ede9fe;flex-wrap:wrap}
+  .mi label{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block}
+  .mi span{font-size:12px;font-weight:700;color:#3b0764}
+  .body{padding:24px 28px}
+  .st{font-size:10px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #ede9fe;padding-bottom:4px;margin:18px 0 8px}
+  p{font-size:11px;line-height:1.8;color:#334155;text-align:justify;margin-bottom:6px}
+  ul{padding-left:14px}li{font-size:11px;line-height:1.8;color:#334155}
+  .sh{font-size:12px;font-weight:800;color:#6d28d9;margin:18px 0 10px;padding-top:14px;border-top:1.5px solid #ede9fe}
+  .sc{border:1px solid #ede9fe;border-radius:6px;padding:10px;margin-bottom:8px;background:#fafafa}
+  .sh2{font-size:10px;font-weight:700;color:#6d28d9;margin-bottom:5px}
+  .ai{font-size:10px;line-height:1.7;color:#334155;background:#f0fdf4;border-radius:5px;padding:7px;border:1px solid #bbf7d0;margin-top:5px}
+  .ftr{border-top:2px solid #f97316;padding:14px 28px;display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px}
+  .sl{width:44%;border-top:1px solid #cbd5e1;padding-top:5px}
+  .sn{font-size:10px;font-weight:700}.sc2{font-size:9px;color:#64748b}.pg{font-size:9px;color:#94a3b8;text-align:center;margin-top:6px}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+  <div class="hdr"><div><div class="hdr-brand">CatherFlow</div><div class="hdr-sub">Relatório Clínico de Acompanhamento</div></div><div class="hdr-date">Gerado em ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div></div>
+  <div class="meta">
+    <div class="mi"><label>Paciente</label><span>${d.paciente}</span></div>
+    <div class="mi"><label>Período</label><span>${d.periodo}</span></div>
+    <div class="mi"><label>Total de Sessões</label><span>${d.total_sessoes}</span></div>
+    <div class="mi"><label>Profissional</label><span>${profNome}</span></div>
+  </div>
+  <div class="body">
+    <div class="st">1. Visão Geral do Percurso Terapêutico</div><p>${s.s1_visao_geral||'—'}</p>
+    <div class="st">2. O que Melhorou</div><p>${s.s2_melhorou||'—'}</p>
+    <div class="st">3. O que Ainda Persiste</div><p>${s.s3_persiste||'—'}</p>
+    <div class="st">4. O que Foi Solucionado</div><p>${s.s4_solucionado||'—'}</p>
+    ${s.s5_intervencoes?.length?`<div class="st">5. Intervenções Utilizadas</div><ul>${s.s5_intervencoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
+    ${s.s6_recomendacoes?.length?`<div class="st">6. Recomendações</div><ul>${s.s6_recomendacoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
+    ${hist.length?`<div class="sh">Histórico de Sessões</div>${hist.map(h=>`
+      <div class="sc"><div class="sh2">Sessão ${h.sessao} — ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
+      ${h.resumo_ia?`<div class="ai">🤖 Resumo IA: ${h.resumo_ia}</div>`:''}</div>`).join('')}`:''}
+  </div>
+  <div class="ftr">
+    <div class="sl"><div class="sn">${profNome}</div><div class="sc2">${crp}</div></div>
+    <div class="sl" style="text-align:right"><div class="sn">Assinatura</div><div class="sc2">_____________________</div></div>
+  </div>
+  <script>window.onload=()=>{window.print();}<\/script></body></html>`;
+  const w=window.open('','_blank'); w.document.write(html); w.document.close();
+}
+
+// ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
+function cfgTab(aba, el){
+  document.querySelectorAll('.cfg-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.cfg-panel').forEach(p=>p.style.display='none');
+  el.classList.add('active');
+  document.getElementById('cfg-'+aba).style.display='block';
+}
+
+function atualizarPreview(){
+  const nome=document.getElementById('cfg-nome')?.value||'Seu nome aqui';
+  const crp=document.getElementById('cfg-registro')?.value||'CRP 00/000000';
+  const ini=nome.trim()[0]?.toUpperCase()||'?';
+  const prevN=document.getElementById('cfg-nome-preview');
+  const prevC=document.getElementById('cfg-crp-preview');
+  const prevI=document.getElementById('cfg-foto-inicial');
+  if(prevN) prevN.textContent=nome;
+  if(prevC) prevC.textContent=crp;
+  if(prevI) prevI.textContent=ini;
+  // Atualiza sidebar também
+  document.getElementById('user-name').textContent=nome;
+  const roleEl=document.getElementById('user-role');
+  if(roleEl && crp) roleEl.textContent=crp;
+}
+
+async function previewFoto(input){
+  const file=input.files[0];
+  if(!file) return;
+  if(file.size>2*1024*1024){toast('Imagem muito grande. Máx 2MB','red');return}
+
+  // Preview imediato local
+  const reader=new FileReader();
+  reader.onload=e=>aplicarFoto(e.target.result);
+  reader.readAsDataURL(file);
+
+  // Upload para Supabase Storage
+  toast('⏳ Enviando foto...');
+  try{
+    const ext=file.name.split('.').pop();
+    const path=`avatars/${user.id}.${ext}`;
+
+    // Faz upload (upsert)
+    const up=await fetch(`${SB}/storage/v1/object/${path}`,{
+      method:'POST',
+      headers:{
+        'apikey':SK,
+        'Authorization':`Bearer ${token}`,
+        'Content-Type':file.type,
+        'x-upsert':'true'
+      },
+      body:file
+    });
+    if(!up.ok) throw new Error('Upload falhou');
+
+    // URL pública
+    const publicUrl=`${SB}/storage/v1/object/public/${path}?t=${Date.now()}`;
+
+    // Salva URL no perfil t2_usuarios
+    await fetch(`${SB}/rest/v1/t2_usuarios`,{
+      method:'POST',
+      headers:{
+        'apikey':SK,'Authorization':`Bearer ${token}`,
+        'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'
+      },
+      body:JSON.stringify({user_id:user.id, avatar_url:publicUrl})
+    });
+
+    localStorage.setItem('cf_foto',publicUrl);
+    aplicarFoto(publicUrl);
+    toast('✅ Foto salva na nuvem!');
+  }catch(e){
+    toast('Foto salva localmente (erro no upload: '+e.message+')','orange');
+  }
+}
+
+function atualizarFotoSidebar(src){
+  const av=document.getElementById('user-avatar');
+  if(!av) return;
+  av.innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+}
+
+function setTema(tema){
+  document.querySelectorAll('.tema-card').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tema-'+tema).classList.add('active');
+  if(tema==='claro'){
+    document.body.classList.add('light');
+  } else {
+    document.body.classList.remove('light');
+  }
+  localStorage.setItem('cf_tema',tema);
+}
+
+function setCorDestaque(cor){
+  document.querySelectorAll('.cor-btn').forEach(b=>b.classList.remove('ativa'));
+  document.querySelector(`.cor-btn[data-cor="${cor}"]`)?.classList.add('ativa');
+  // Aplica as variáveis CSS
+  document.documentElement.style.setProperty('--p1',cor);
+  document.documentElement.style.setProperty('--p2',ajustarCor(cor,-20));
+  document.documentElement.style.setProperty('--p3',ajustarCor(cor,30));
+  localStorage.setItem('cf_cor',cor);
+}
+
+function ajustarCor(hex,delta){
+  const n=parseInt(hex.replace('#',''),16);
+  const r=Math.min(255,Math.max(0,((n>>16)&255)+delta));
+  const g=Math.min(255,Math.max(0,((n>>8)&255)+delta));
+  const b=Math.min(255,Math.max(0,(n&255)+delta));
+  return`#${[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('')}`;
+}
+
+async function salvarConfig(){
+  const body={
+    id: user.id,                          // chave primária = auth.uid()
+    nome_completo: document.getElementById('cfg-nome')?.value.trim(),
+    registro_profissional: document.getElementById('cfg-registro')?.value.trim(),
+    avatar_url: localStorage.getItem('cf_foto')||undefined
+  };
+  // Remove campos undefined
+  Object.keys(body).forEach(k=>body[k]===undefined && delete body[k]);
+  // Salva localmente
+  const cfgLocal={
+    nome_clinica: document.getElementById('cfg-clinica')?.value.trim(),
+    nome_profissional: body.nome_completo,
+    registro: body.registro_profissional,
+    tipo_profissional: document.getElementById('cfg-tipo')?.value,
+    bio: document.getElementById('cfg-bio')?.value.trim(),
+    endereco: document.getElementById('cfg-endereco')?.value.trim(),
+    whatsapp: document.getElementById('cfg-whatsapp')?.value.trim(),
+    instagram: document.getElementById('cfg-instagram')?.value.trim(),
+    site: document.getElementById('cfg-site')?.value.trim(),
+  };
+  localStorage.setItem('cf_config', JSON.stringify(cfgLocal));
+  try{
+    const r=await fetch(`${SB}/rest/v1/t2_usuarios`,{
+      method:'POST',
+      headers:{
+        'apikey':SK,'Authorization':`Bearer ${token}`,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates'
+      },
+      body:JSON.stringify(body)
+    });
+    toast(r.ok?'✅ Identidade salva!':'✅ Salvo localmente!');
+  }catch(e){
+    toast('✅ Salvo localmente!');
+  }
+  atualizarPreview();
+}
+
+function salvarVisual(){
+  toast('✅ Visual salvo!');
+}
+
+function salvarSistema(){
+  const cfg={
+    valor:document.getElementById('cfg-valor')?.value,
+    duracao:document.getElementById('cfg-duracao')?.value,
+    notif:document.getElementById('cfg-notif')?.value,
+  };
+  localStorage.setItem('cf_sistema',JSON.stringify(cfg));
+  toast('✅ Sistema salvo!');
+}
+
+function carregarConfiguracoesSalvas(){
+  // Tema
+  const tema=localStorage.getItem('cf_tema');
+  if(tema==='claro') setTema('claro');
+  // Cor
+  const cor=localStorage.getItem('cf_cor');
+  if(cor) setCorDestaque(cor);
+  // Foto (cache local enquanto não carrega do Supabase)
+  const foto=localStorage.getItem('cf_foto');
+  if(foto) aplicarFoto(foto);
+  // Config
+  const cfg=localStorage.getItem('cf_config');
+  if(cfg){
+    try{
+      const c=JSON.parse(cfg);
+      const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+      set('cfg-clinica',c.nome_clinica);
+      set('cfg-nome',c.nome_profissional);
+      set('cfg-registro',c.registro);
+      set('cfg-tipo',c.tipo_profissional);
+      set('cfg-bio',c.bio);
+      set('cfg-endereco',c.endereco);
+      set('cfg-whatsapp',c.whatsapp);
+      set('cfg-instagram',c.instagram);
+      set('cfg-site',c.site);
+      atualizarPreview();
+      // Login personalizado
+      const loginTitle=document.getElementById('login-title');
+      const loginSub=document.getElementById('login-sub');
+      if(loginTitle&&c.nome_clinica) loginTitle.textContent=c.nome_clinica;
+      if(loginSub&&c.nome_profissional) loginSub.textContent=c.nome_profissional+(c.registro?' · '+c.registro:'');
+    }catch(e){console.error('cfg parse error',e)}
+  }
+}
+
+// Carrega foto do Supabase Storage após login
+async function carregarFotoDoSupabase(){
+  try{
+    // Busca URL da foto salva no perfil do usuário
+    const r=await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,registro_profissional,avatar_url`,{
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    const data=await r.json();
+    if(Array.isArray(data)&&data[0]){
+      const u=data[0];
+      // Foto
+      if(u.avatar_url){
+        localStorage.setItem('cf_foto',u.avatar_url);
+        aplicarFoto(u.avatar_url);
+      }
+      // Preenche campos de config com dados do banco
+      const setEl=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+      setEl('cfg-nome', u.nome_completo);
+      setEl('cfg-registro', u.registro_profissional);
+      atualizarPreview();
+    }
+  }catch(e){console.error('foto supabase',e)}
+}
+
+function aplicarFoto(src){
+  // Preview na aba config
+  const img=document.getElementById('cfg-foto-img');
+  const ini=document.getElementById('cfg-foto-inicial');
+  if(img){img.src=src;img.style.display='block';}
+  if(ini) ini.style.display='none';
+  // Sidebar
+  atualizarFotoSidebar(src);
+  // Login
+  const loginFoto=document.getElementById('login-foto');
+  const loginIni=document.getElementById('login-avatar-ini');
+  if(loginFoto){loginFoto.src=src;loginFoto.style.display='block';}
+  if(loginIni) loginIni.style.display='none';
+}
+
+// ── NAVEGAÇÃO ─────────────────────────────────────────────────────────────────
+function nav(page,el){
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById(`page-${page}`)?.classList.add('active');
+  if(page==='relatorios') carregarRelatorios();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function fmtDate(d){
+  if(!d)return'—';
+  const[y,m,day]=(d.split('T')[0]).split('-');
+  return`${day}/${m}/${y}`;
+}
+
+function toast(msg,tipo='green'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=tipo==='red'?'#ef4444':tipo==='orange'?'#f59e0b':'#22c55e';
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  carregarConfiguracoesSalvas();
+  const t=localStorage.getItem('cf_token');
+  const u=localStorage.getItem('cf_user');
+  if(t&&u){token=t;user=JSON.parse(u);iniciarApp();}
+  document.getElementById('senha').addEventListener('keypress',e=>{if(e.key==='Enter')login()});
+  document.getElementById('reg-senha').addEventListener('keypress',e=>{if(e.key==='Enter')registro()});
+});
+</script>
+</body>
+</html>
