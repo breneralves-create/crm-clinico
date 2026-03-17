@@ -589,12 +589,25 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
       <button class="modal-close" onclick="fecharModal('modal-sessao')">×</button>
     </div>
     <div class="field"><label>Paciente *</label><select id="sess-pac"></select></div>
-    <div class="field"><label>Data *</label><input type="date" id="sess-data"></div>
+    <div class="grid-2">
+      <div class="field"><label>Data *</label><input type="date" id="sess-data"></div>
+      <div class="field"><label>Horário</label><input type="time" id="sess-horario" value="09:00"></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Tipo de Sessão</label>
+        <select id="sess-tipo">
+          <option value="presencial">Presencial</option>
+          <option value="online">Online</option>
+        </select>
+      </div>
+      <div class="field"><label>Nº da Sessão</label><input type="text" id="sess-numero" placeholder="Ex: 1, 2, 10..."></div>
+    </div>
     <div class="field"><label>Queixas Principais</label><textarea id="sess-queixas" placeholder="O que o paciente trouxe nesta sessão..."></textarea></div>
     <div class="field"><label>Intervenções Realizadas</label><textarea id="sess-intervencoes" placeholder="Técnicas e abordagens utilizadas..."></textarea></div>
     <div class="field"><label>Evolução Observada</label><textarea id="sess-evolucao" placeholder="Progressos ou retrocessos observados..."></textarea></div>
     <div class="field"><label>Pontos de Atenção</label><textarea id="sess-atencao" placeholder="Aspectos que merecem acompanhamento..."></textarea></div>
     <div class="field"><label>Próximos Passos</label><textarea id="sess-proximos" placeholder="Encaminhamentos para as próximas sessões..."></textarea></div>
+    <div class="field"><label>🔒 Anotação Clínica Privada</label><textarea id="sess-anotacao" placeholder="Impressões pessoais, hipóteses diagnósticas — não aparece em relatórios..." style="border-color:rgba(124,58,237,.3)"></textarea></div>
     <div class="grid-2">
       <div class="field"><label>Valor (R$)</label><input type="number" id="sess-valor" step="0.01" placeholder="150.00"></div>
       <div class="field"><label>Status Pagamento</label>
@@ -935,14 +948,16 @@ function renderSessoes(){
   if(!sessoes.length){
     div.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';return;
   }
-  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Paciente</th><th>Queixas</th><th>Evolução</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
-    sessoes.slice(0,30).map(s=>{
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Tipo</th><th>Nº</th><th>Queixas</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
+    sessoes.slice(0,50).map(s=>{
       const p=pacientes.find(x=>x.id==s.paciente_id);
       return`<tr>
         <td>${fmtDate(s.data_sessao)}</td>
-        <td><strong>${p?.nome||'—'}</strong></td>
+        <td>${s.horario?s.horario.substring(0,5):'—'}</td>
+        <td><strong style="cursor:pointer;color:var(--p4)" onclick="abrirDetalhePaciente(${p?.id})">${p?.nome||'—'}</strong></td>
+        <td><span style="font-size:11px;color:var(--text3)">${s.tipo_sessao||'presencial'}</span></td>
+        <td><span class="badge badge-purple">${s.numero_sessao||'—'}</span></td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
-        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.evolucao||'—'}</td>
         <td>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
         <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td>
       </tr>`;
@@ -1166,7 +1181,10 @@ function abrirModalSessao(){
   const sel=document.getElementById('sess-pac');
   sel.innerHTML=pacientes.length?pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join(''):'<option value="">Cadastre um paciente primeiro</option>';
   document.getElementById('sess-data').value=new Date().toISOString().split('T')[0];
-  ['sess-queixas','sess-intervencoes','sess-evolucao','sess-atencao','sess-proximos'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sess-horario').value=new Date().toTimeString().substring(0,5);
+  document.getElementById('sess-tipo').value='presencial';
+  document.getElementById('sess-numero').value='';
+  ['sess-queixas','sess-intervencoes','sess-evolucao','sess-atencao','sess-proximos','sess-anotacao'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('sess-valor').value='';
   document.getElementById('sess-status').value='pendente';
   document.getElementById('modal-sessao').classList.add('show');
@@ -1252,10 +1270,13 @@ function abrirDetalhePaciente(id){
   if(!ss.length){
     divSess.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';
   } else {
-    divSess.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Queixas</th><th>Evolução</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
+    divSess.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Nº</th><th>Data</th><th>Horário</th><th>Tipo</th><th>Queixas</th><th>Evolução</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
       ss.map(s=>`<tr>
+        <td><span class="badge badge-purple">${s.numero_sessao||'—'}</span></td>
         <td>${fmtDate(s.data_sessao)}</td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
+        <td>${s.horario?s.horario.substring(0,5):'—'}</td>
+        <td><span style="font-size:11px;color:var(--text3)">${s.tipo_sessao||'presencial'}</span></td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
         <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.evolucao||'—'}</td>
         <td>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
         <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td>
@@ -1373,11 +1394,15 @@ async function salvarSessao(){
       user_id:user.id,
       paciente_id:parseInt(pacId),
       data_sessao:document.getElementById('sess-data').value,
+      horario:document.getElementById('sess-horario').value+':00',
+      tipo_sessao:document.getElementById('sess-tipo').value||'presencial',
+      numero_sessao:document.getElementById('sess-numero').value.trim()||null,
       queixas_principais:document.getElementById('sess-queixas').value.trim(),
       intervencoes:document.getElementById('sess-intervencoes').value.trim(),
       evolucao:document.getElementById('sess-evolucao').value.trim(),
       pontos_atencao:document.getElementById('sess-atencao').value.trim(),
       proximos_passos:document.getElementById('sess-proximos').value.trim(),
+      anotacao_clinica:document.getElementById('sess-anotacao').value.trim(),
       valor:parseFloat(document.getElementById('sess-valor').value)||null,
       status_pagamento:document.getElementById('sess-status').value
     });
@@ -1386,6 +1411,8 @@ async function salvarSessao(){
     toast('✅ Sessão salva com resumo IA gerado!');
     await carregarSessoes();
     renderDashboard(); renderSessoes();
+    // Atualiza detalhe do paciente se estiver aberto
+    if(pacienteAtual&&pacienteAtual.id==pacId) abrirDetalhePaciente(pacId);
   }catch(e){toast('Erro: '+e.message,'red')}
   finally{btn.disabled=false;btn.textContent='Salvar Sessão'}
 }
