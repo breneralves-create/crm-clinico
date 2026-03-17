@@ -132,6 +132,26 @@ body.light .cfg-tab{color:#64748b}
 body.light .cfg-tab.active{color:#fff}
 body.light .tema-card{background:#fff;border-color:#e2e8f0}
 
+/* AGENDA SEMANAL */
+.ag-grid{display:grid;grid-template-columns:60px repeat(7,1fr)}
+.ag-header-cell{padding:12px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+.ag-header-cell:last-child{border-right:none}
+.ag-header-cell.hoje{background:rgba(124,58,237,.12);color:var(--p4)}
+.ag-header-cell .ag-dia-num{font-size:22px;font-weight:800;color:var(--text);display:block;line-height:1.1}
+.ag-header-cell.hoje .ag-dia-num{color:var(--p3)}
+.ag-time-col{padding:8px 6px;text-align:right;font-size:10px;font-weight:600;color:var(--text3);border-right:1px solid var(--border);border-bottom:1px solid rgba(255,255,255,.04);min-height:52px;display:flex;align-items:flex-start;padding-top:6px}
+.ag-slot{border-right:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04);min-height:52px;padding:3px;position:relative;cursor:pointer;transition:.15s}
+.ag-slot:last-child{border-right:none}
+.ag-slot:hover{background:rgba(124,58,237,.06)}
+.ag-slot.hoje-col{background:rgba(124,58,237,.04)}
+.ag-card{border-radius:7px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:2px;transition:.2s;border-left:3px solid transparent}
+.ag-card:hover{filter:brightness(1.15);transform:translateX(1px)}
+.ag-card.agendado{background:rgba(245,158,11,.15);border-left-color:var(--orange);color:var(--orange)}
+.ag-card.confirmado{background:rgba(34,197,94,.15);border-left-color:var(--green);color:var(--green)}
+.ag-card.cancelado{background:rgba(239,68,68,.1);border-left-color:var(--red);color:var(--red);text-decoration:line-through;opacity:.6}
+.ag-card .ag-card-nome{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ag-card .ag-card-hora{font-size:10px;opacity:.8;font-weight:600}
+
 #toast{position:fixed;bottom:24px;right:24px;background:#22c55e;color:#fff;padding:13px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(34,197,94,.4);transition:opacity .4s;opacity:0;pointer-events:none}
 #toast.show{opacity:1}
 </style>
@@ -257,6 +277,43 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
       </div>
     </div>
 
+    <!-- ── DETALHE PACIENTE ──────────────────────────────────── -->
+    <div id="page-paciente-detalhe" class="page">
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="voltarParaPacientes()" style="background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:var(--text2);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">← Voltar</button>
+          <h1 id="detalhe-nome">Paciente</h1>
+        </div>
+        <div class="hactions">
+          <button class="btn-primary" onclick="abrirEditarPaciente()">✏️ Editar</button>
+          <button class="btn-primary" onclick="abrirModalSessaoDetalhe()">+ Nova Sessão</button>
+        </div>
+      </div>
+
+      <!-- Dados pessoais -->
+      <div class="card">
+        <div class="card-title">👤 Dados Pessoais</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+          <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Telefone</div><div id="detalhe-tel" style="font-size:14px;font-weight:600">—</div></div>
+          <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">E-mail</div><div id="detalhe-email" style="font-size:14px;font-weight:600">—</div></div>
+          <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Nascimento</div><div id="detalhe-nascimento" style="font-size:14px;font-weight:600">—</div></div>
+          <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Queixa Inicial</div><div id="detalhe-queixa" style="font-size:14px;font-weight:600;color:var(--text2)">—</div></div>
+        </div>
+      </div>
+
+      <!-- Agendamentos futuros -->
+      <div class="card">
+        <div class="card-title">📅 Agendamentos Futuros</div>
+        <div id="detalhe-agenda"></div>
+      </div>
+
+      <!-- Histórico de sessões -->
+      <div class="card">
+        <div class="card-title">📋 Histórico de Sessões</div>
+        <div id="detalhe-sessoes"></div>
+      </div>
+    </div>
+
     <!-- ── SESSÕES ─────────────────────────────────────────── -->
     <div id="page-sessoes" class="page">
       <div class="page-header">
@@ -278,8 +335,41 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
           <button class="btn-primary" onclick="abrirModalAgenda()">+ Novo Agendamento</button>
         </div>
       </div>
-      <div class="card">
-        <div class="table-wrap"><div id="lista-agenda"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div></div>
+
+      <!-- Navegação de semana -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button onclick="semanaAnterior()" style="background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:var(--text2);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">← Anterior</button>
+          <button onclick="semanaAtual()" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:8px 14px;color:var(--p4);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">Hoje</button>
+          <button onclick="proximaSemana()" style="background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:var(--text2);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">Próxima →</button>
+        </div>
+        <div id="agenda-semana-label" style="font-size:15px;font-weight:700;color:var(--text2)"></div>
+        <div style="display:flex;gap:8px">
+          <button onclick="setViewAgenda('semana')" id="btn-view-semana" class="btn-sm">Semana</button>
+          <button onclick="setViewAgenda('lista')" id="btn-view-lista" class="btn-sm">Lista</button>
+        </div>
+      </div>
+
+      <!-- KPIs rápidos da semana -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px">
+        <div class="kpi-card"><div class="kpi-label">Esta Semana</div><div class="kpi-value" id="ag-kpi-semana" style="font-size:26px">0</div><div class="kpi-sub">agendamentos</div></div>
+        <div class="kpi-card"><div class="kpi-label">Confirmados</div><div class="kpi-value" id="ag-kpi-confirmados" style="font-size:26px;color:var(--green)">0</div><div class="kpi-sub up">confirmados</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pendentes</div><div class="kpi-value" id="ag-kpi-pendentes" style="font-size:26px;color:var(--orange)">0</div><div class="kpi-sub">aguardando</div></div>
+        <div class="kpi-card"><div class="kpi-label">Hoje</div><div class="kpi-value" id="ag-kpi-hoje" style="font-size:26px;color:var(--p3)">0</div><div class="kpi-sub">sessões hoje</div></div>
+      </div>
+
+      <!-- View semana -->
+      <div id="agenda-view-semana">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="agenda-grade-semana"></div>
+        </div>
+      </div>
+
+      <!-- View lista -->
+      <div id="agenda-view-lista" style="display:none">
+        <div class="card">
+          <div class="table-wrap"><div id="lista-agenda"></div></div>
+        </div>
       </div>
     </div>
 
@@ -454,6 +544,25 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
 
 <!-- ═══════════════════════════════════════════════ MODAIS -->
 
+<!-- MODAL EDITAR PACIENTE -->
+<div id="modal-editar-paciente" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Editar Paciente</div>
+      <button class="modal-close" onclick="fecharModal('modal-editar-paciente')">×</button>
+    </div>
+    <input type="hidden" id="edit-pac-id">
+    <div class="field"><label>Nome Completo *</label><input type="text" id="edit-pac-nome" placeholder="Nome do paciente"></div>
+    <div class="grid-2">
+      <div class="field"><label>Telefone</label><input type="tel" id="edit-pac-tel" placeholder="(00) 00000-0000"></div>
+      <div class="field"><label>Data de Nascimento</label><input type="date" id="edit-pac-nascimento"></div>
+    </div>
+    <div class="field"><label>E-mail</label><input type="email" id="edit-pac-email" placeholder="paciente@email.com"></div>
+    <div class="field"><label>Queixa Inicial</label><textarea id="edit-pac-queixa" placeholder="Motivo principal..."></textarea></div>
+    <button class="btn" id="btn-salvar-edit-pac" onclick="salvarEdicaoPaciente()">Salvar Alterações</button>
+  </div>
+</div>
+
 <!-- MODAL PACIENTE -->
 <div id="modal-paciente" class="modal">
   <div class="modal-box">
@@ -507,13 +616,51 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
     <div class="field"><label>Paciente *</label><select id="ag-pac"></select></div>
     <div class="grid-2">
       <div class="field"><label>Data *</label><input type="date" id="ag-data"></div>
-      <div class="field"><label>Horário *</label><input type="time" id="ag-hora" value="14:00"></div>
+      <div class="field"><label>Horário *</label><input type="time" id="ag-hora" value="09:00"></div>
     </div>
-    <div class="field"><label>Status</label>
-      <select id="ag-status"><option value="agendado">Agendado</option><option value="confirmado">Confirmado</option><option value="cancelado">Cancelado</option></select>
+    <div class="grid-2">
+      <div class="field"><label>Duração</label>
+        <select id="ag-duracao">
+          <option value="30">30 min</option>
+          <option value="50" selected>50 min</option>
+          <option value="60">60 min</option>
+          <option value="90">90 min</option>
+        </select>
+      </div>
+      <div class="field"><label>Status</label>
+        <select id="ag-status">
+          <option value="agendado">Agendado</option>
+          <option value="confirmado">Confirmado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
     </div>
-    <div class="field"><label>Link Videochamada (opcional)</label><input type="url" id="ag-link" placeholder="https://meet.google.com/..."></div>
+    <div class="field"><label>Tipo de sessão</label>
+      <select id="ag-tipo">
+        <option value="presencial">Presencial</option>
+        <option value="online">Online</option>
+      </select>
+    </div>
+    <div id="ag-link-wrap" class="field" style="display:none"><label>Link Videochamada</label><input type="url" id="ag-link" placeholder="https://meet.google.com/..."></div>
+    <div class="field"><label>Observações</label><textarea id="ag-obs" placeholder="Anotações sobre este agendamento..." style="min-height:60px"></textarea></div>
     <button class="btn" id="btn-salvar-ag" onclick="salvarAgendamento()">Salvar Agendamento</button>
+  </div>
+</div>
+
+<!-- MODAL DETALHE AGENDAMENTO -->
+<div id="modal-ag-detalhe" class="modal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title" id="ag-det-titulo">Agendamento</div>
+      <button class="modal-close" onclick="fecharModal('modal-ag-detalhe')">×</button>
+    </div>
+    <div id="ag-det-body" style="margin-bottom:20px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-sm" onclick="confirmarAgendamento()" id="btn-ag-confirmar">✅ Confirmar</button>
+      <button class="btn-sm" onclick="abrirSessaoDoAgendamento()" style="background:rgba(168,85,247,.2);border-color:rgba(168,85,247,.4);color:#c4b5fd">📋 Registrar Sessão</button>
+      <button class="btn-danger" onclick="cancelarAgendamento()" id="btn-ag-cancelar">Cancelar</button>
+      <button class="btn-danger" onclick="excluirAgendamentoDetalhe()" style="margin-left:auto">Excluir</button>
+    </div>
   </div>
 </div>
 
@@ -766,16 +913,16 @@ function renderPacientes(){
   if(!pacientes.length){
     div.innerHTML='<div class="empty"><div class="empty-icon">👥</div><p>Nenhum paciente cadastrado</p></div>';return;
   }
-  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Queixa Inicial</th><th>Sessões</th><th>Ações</th></tr></thead><tbody>${
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Nascimento</th><th>Sessões</th><th>Ações</th></tr></thead><tbody>${
     pacientes.map(p=>{
       const total=sessoes.filter(s=>s.paciente_id==p.id).length;
-      return`<tr>
+      return`<tr style="cursor:pointer" onclick="abrirDetalhePaciente(${p.id})">
         <td><strong>${p.nome}</strong></td>
         <td>${p.telefone||'—'}</td>
         <td>${p.email||'—'}</td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3)">${p.queixa_inicial||'—'}</td>
+        <td>${p.data_nascimento?fmtDate(p.data_nascimento):'—'}</td>
         <td><span class="badge badge-purple">${total}</span></td>
-        <td style="display:flex;gap:6px">
+        <td style="display:flex;gap:6px" onclick="event.stopPropagation()">
           <button class="btn-sm" onclick="abrirModalSessaoParaPaciente(${p.id})">+ Sessão</button>
           <button class="btn-danger" onclick="excluirPaciente(${p.id},'${p.nome.replace(/'/g,"\\'")}')">Excluir</button>
         </td>
@@ -802,25 +949,195 @@ function renderSessoes(){
     }).join('')}</tbody></table></div>`;
 }
 
+// ── AGENDA SEMANAL ────────────────────────────────────────────────────────────
+let agendaViewMode = 'semana';
+let agendaSemanaOffset = 0;
+let agendamentoAtual = null;
+
+function getInicioSemana(offset=0){
+  const hoje = new Date();
+  const dia = hoje.getDay(); // 0=dom
+  const seg = new Date(hoje);
+  seg.setDate(hoje.getDate() - (dia===0?6:dia-1) + (offset*7));
+  seg.setHours(0,0,0,0);
+  return seg;
+}
+
+function setViewAgenda(mode){
+  agendaViewMode = mode;
+  document.getElementById('agenda-view-semana').style.display = mode==='semana'?'block':'none';
+  document.getElementById('agenda-view-lista').style.display = mode==='lista'?'block':'none';
+  document.getElementById('btn-view-semana').style.background = mode==='semana'?'rgba(124,58,237,.35)':'rgba(124,58,237,.2)';
+  document.getElementById('btn-view-lista').style.background = mode==='lista'?'rgba(124,58,237,.35)':'rgba(124,58,237,.2)';
+  renderAgenda();
+}
+
+function semanaAnterior(){ agendaSemanaOffset--; renderAgenda(); }
+function proximaSemana(){ agendaSemanaOffset++; renderAgenda(); }
+function semanaAtual(){ agendaSemanaOffset=0; renderAgenda(); }
+
 function renderAgenda(){
-  const div=document.getElementById('lista-agenda');
-  const hoje=new Date().toISOString().split('T')[0];
-  const futuros=agenda.filter(a=>a.data>=hoje&&a.status!=='cancelado').slice(0,30);
-  if(!futuros.length){
-    div.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>Nenhum agendamento futuro</p></div>';return;
+  const inicio = getInicioSemana(agendaSemanaOffset);
+  const dias = Array.from({length:7},(_,i)=>{ const d=new Date(inicio); d.setDate(inicio.getDate()+i); return d; });
+  const hoje = new Date().toISOString().split('T')[0];
+
+  // Label semana
+  const opts = {day:'2-digit',month:'short'};
+  const fim = dias[6];
+  document.getElementById('agenda-semana-label').textContent =
+    `${inicio.toLocaleDateString('pt-BR',opts)} – ${fim.toLocaleDateString('pt-BR',opts)}`;
+
+  // KPIs
+  const semanaStrs = dias.map(d=>d.toISOString().split('T')[0]);
+  const agSemana = agenda.filter(a=>semanaStrs.includes(a.data));
+  document.getElementById('ag-kpi-semana').textContent = agSemana.length;
+  document.getElementById('ag-kpi-confirmados').textContent = agSemana.filter(a=>a.status==='confirmado').length;
+  document.getElementById('ag-kpi-pendentes').textContent = agSemana.filter(a=>a.status==='agendado').length;
+  document.getElementById('ag-kpi-hoje').textContent = agenda.filter(a=>a.data===hoje).length;
+
+  if(agendaViewMode==='semana') renderGradeSemana(dias, hoje);
+  else renderListaAgenda();
+}
+
+function renderGradeSemana(dias, hoje){
+  const diasNomes = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const horarios = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
+
+  let html = '<div class="ag-grid">';
+  // Header
+  html += '<div class="ag-header-cell" style="border-bottom:1px solid var(--border)"></div>';
+  dias.forEach((d,i)=>{
+    const str = d.toISOString().split('T')[0];
+    const isHoje = str===hoje;
+    html += `<div class="ag-header-cell${isHoje?' hoje':''}">
+      <span style="font-size:10px">${diasNomes[i]}</span>
+      <span class="ag-dia-num">${d.getDate()}</span>
+    </div>`;
+  });
+
+  // Linhas de horário
+  horarios.forEach(hr=>{
+    html += `<div class="ag-time-col">${hr}</div>`;
+    dias.forEach(d=>{
+      const str = d.toISOString().split('T')[0];
+      const isHoje = str===hoje;
+      const ags = agenda.filter(a=>a.data===str && a.hora?.startsWith(hr.split(':')[0]+':'));
+      html += `<div class="ag-slot${isHoje?' hoje-col':''}" onclick="abrirModalAgendaData('${str}','${hr}')">`;
+      ags.forEach(a=>{
+        const pac = pacientes.find(p=>p.id==a.paciente_id);
+        html += `<div class="ag-card ${a.status||'agendado'}" onclick="event.stopPropagation();abrirDetalheAgendamento(${a.id})" title="${pac?.nome||'—'} — ${a.hora?.substring(0,5)}">
+          <span class="ag-card-hora">${a.hora?.substring(0,5)}</span>
+          <span class="ag-card-nome">${pac?.nome||'—'}</span>
+        </div>`;
+      });
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+  document.getElementById('agenda-grade-semana').innerHTML = html;
+}
+
+function renderListaAgenda(){
+  const hoje = new Date().toISOString().split('T')[0];
+  const inicio = getInicioSemana(agendaSemanaOffset);
+  const fim = new Date(inicio); fim.setDate(inicio.getDate()+6);
+  const inicioStr = inicio.toISOString().split('T')[0];
+  const fimStr = fim.toISOString().split('T')[0];
+  const filtrados = agenda.filter(a=>a.data>=inicioStr&&a.data<=fimStr).sort((a,b)=>a.data===b.data?a.hora?.localeCompare(b.hora||''):a.data.localeCompare(b.data));
+  const div = document.getElementById('lista-agenda');
+  if(!filtrados.length){
+    div.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>Nenhum agendamento nesta semana</p></div>';return;
   }
-  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Status</th><th>Link</th><th>Ações</th></tr></thead><tbody>${
-    futuros.map(a=>{
+  div.innerHTML=`<table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${
+    filtrados.map(a=>{
       const p=pacientes.find(x=>x.id==a.paciente_id);
-      return`<tr>
-        <td>${fmtDate(a.data)}</td>
-        <td>${a.hora?.substring(0,5)||'—'}</td>
-        <td><strong>${p?.nome||'—'}</strong></td>
+      const isHoje=a.data===hoje;
+      return`<tr style="${isHoje?'background:rgba(124,58,237,.06)':''}">
+        <td>${fmtDate(a.data)}${isHoje?'<span class="badge badge-purple" style="margin-left:6px">Hoje</span>':''}</td>
+        <td><strong>${a.hora?.substring(0,5)||'—'}</strong></td>
+        <td><strong style="cursor:pointer;color:var(--p4)" onclick="abrirDetalhePaciente(${p?.id})">${p?.nome||'—'}</strong></td>
+        <td><span style="font-size:12px;color:var(--text3)">${a.tipo||'presencial'}</span></td>
         <td><span class="badge badge-${a.status==='confirmado'?'green':a.status==='cancelado'?'red':'orange'}">${a.status||'agendado'}</span></td>
-        <td>${a.link_videochamada?`<a href="${a.link_videochamada}" target="_blank" style="color:var(--p3);font-size:12px">Abrir link</a>`:'—'}</td>
-        <td><button class="btn-danger" onclick="excluirAgendamento(${a.id})">Excluir</button></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="abrirDetalheAgendamento(${a.id})">Ver</button>
+          <button class="btn-danger" onclick="excluirAgendamento(${a.id})">Excluir</button>
+        </td>
       </tr>`;
-    }).join('')}</tbody></table></div>`;
+    }).join('')}</tbody></table>`;
+}
+
+function abrirModalAgendaData(data, hora){
+  abrirModalAgenda();
+  document.getElementById('ag-data').value = data;
+  document.getElementById('ag-hora').value = hora;
+}
+
+function abrirDetalheAgendamento(id){
+  agendamentoAtual = agenda.find(a=>a.id==id);
+  if(!agendamentoAtual) return;
+  const pac = pacientes.find(p=>p.id==agendamentoAtual.paciente_id);
+  document.getElementById('ag-det-titulo').textContent = pac?.nome||'Agendamento';
+  document.getElementById('ag-det-body').innerHTML = `
+    <div style="display:grid;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--text3)">📅 Data</span>
+        <strong>${fmtDate(agendamentoAtual.data)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--text3)">⏰ Horário</span>
+        <strong>${agendamentoAtual.hora?.substring(0,5)||'—'}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--text3)">📍 Tipo</span>
+        <strong>${agendamentoAtual.tipo||'presencial'}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--text3)">Status</span>
+        <span class="badge badge-${agendamentoAtual.status==='confirmado'?'green':agendamentoAtual.status==='cancelado'?'red':'orange'}">${agendamentoAtual.status||'agendado'}</span>
+      </div>
+      ${agendamentoAtual.link_videochamada?`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--text3)">🔗 Link</span><a href="${agendamentoAtual.link_videochamada}" target="_blank" style="color:var(--p3);font-size:13px;font-weight:600">Abrir videochamada</a></div>`:''}
+      ${agendamentoAtual.observacoes?`<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px;font-size:13px;color:var(--text2)">${agendamentoAtual.observacoes}</div>`:''}
+    </div>`;
+  document.getElementById('modal-ag-detalhe').classList.add('show');
+}
+
+async function confirmarAgendamento(){
+  if(!agendamentoAtual) return;
+  try{
+    await fetch(`${SB}/rest/v1/${TA}?id=eq.${agendamentoAtual.id}`,{
+      method:'PATCH',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({status:'confirmado',confirmado:true})
+    });
+    toast('✅ Agendamento confirmado!');
+    fecharModal('modal-ag-detalhe');
+    await carregarAgenda(); renderAgenda();
+  }catch(e){toast('Erro ao confirmar','red')}
+}
+
+async function cancelarAgendamento(){
+  if(!agendamentoAtual||!confirm('Cancelar este agendamento?')) return;
+  try{
+    await fetch(`${SB}/rest/v1/${TA}?id=eq.${agendamentoAtual.id}`,{
+      method:'PATCH',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({status:'cancelado'})
+    });
+    toast('Agendamento cancelado.','orange');
+    fecharModal('modal-ag-detalhe');
+    await carregarAgenda(); renderAgenda();
+  }catch(e){toast('Erro','red')}
+}
+
+async function excluirAgendamentoDetalhe(){
+  if(!agendamentoAtual||!confirm('Excluir este agendamento?')) return;
+  fecharModal('modal-ag-detalhe');
+  await excluirAgendamento(agendamentoAtual.id);
+}
+
+function abrirSessaoDoAgendamento(){
+  fecharModal('modal-ag-detalhe');
+  if(agendamentoAtual) abrirModalSessaoParaPaciente(agendamentoAtual.paciente_id);
 }
 
 function renderListaRelatorios(data){
@@ -864,9 +1181,16 @@ function abrirModalAgenda(){
   const sel=document.getElementById('ag-pac');
   sel.innerHTML=pacientes.length?pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join(''):'<option value="">Cadastre um paciente primeiro</option>';
   document.getElementById('ag-data').value=new Date().toISOString().split('T')[0];
-  document.getElementById('ag-hora').value='14:00';
+  document.getElementById('ag-hora').value='09:00';
+  document.getElementById('ag-duracao').value='50';
   document.getElementById('ag-status').value='agendado';
+  document.getElementById('ag-tipo').value='presencial';
   document.getElementById('ag-link').value='';
+  document.getElementById('ag-obs').value='';
+  document.getElementById('ag-link-wrap').style.display='none';
+  document.getElementById('ag-tipo').onchange=function(){
+    document.getElementById('ag-link-wrap').style.display=this.value==='online'?'block':'none';
+  };
   document.getElementById('modal-agenda').classList.add('show');
 }
 
@@ -890,6 +1214,105 @@ function togglePeriodoCustom(){
 
 function fecharModal(id){document.getElementById(id).classList.remove('show')}
 
+// ── DETALHE PACIENTE ─────────────────────────────────────────────────────────
+let pacienteAtual = null;
+
+function abrirDetalhePaciente(id){
+  pacienteAtual = pacientes.find(p=>p.id==id);
+  if(!pacienteAtual) return;
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-paciente-detalhe').classList.add('active');
+
+  document.getElementById('detalhe-nome').textContent = pacienteAtual.nome;
+  document.getElementById('detalhe-tel').textContent = pacienteAtual.telefone||'—';
+  document.getElementById('detalhe-email').textContent = pacienteAtual.email||'—';
+  document.getElementById('detalhe-nascimento').textContent = pacienteAtual.data_nascimento?fmtDate(pacienteAtual.data_nascimento):'—';
+  document.getElementById('detalhe-queixa').textContent = pacienteAtual.queixa_inicial||'—';
+
+  // Agendamentos futuros
+  const hoje = new Date().toISOString().split('T')[0];
+  const ags = agenda.filter(a=>a.paciente_id==id&&a.data>=hoje&&a.status!=='cancelado');
+  const divAg = document.getElementById('detalhe-agenda');
+  if(!ags.length){
+    divAg.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>Nenhum agendamento futuro</p></div>';
+  } else {
+    divAg.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Status</th><th>Link</th></tr></thead><tbody>${
+      ags.map(a=>`<tr>
+        <td>${fmtDate(a.data)}</td>
+        <td>${a.hora?.substring(0,5)||'—'}</td>
+        <td><span class="badge badge-${a.status==='confirmado'?'green':a.status==='cancelado'?'red':'orange'}">${a.status||'agendado'}</span></td>
+        <td>${a.link_videochamada?`<a href="${a.link_videochamada}" target="_blank" style="color:var(--p3);font-size:12px">Abrir</a>`:'—'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }
+
+  // Histórico de sessões
+  const ss = sessoes.filter(s=>s.paciente_id==id);
+  const divSess = document.getElementById('detalhe-sessoes');
+  if(!ss.length){
+    divSess.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';
+  } else {
+    divSess.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Queixas</th><th>Evolução</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
+      ss.map(s=>`<tr>
+        <td>${fmtDate(s.data_sessao)}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.evolucao||'—'}</td>
+        <td>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
+        <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }
+}
+
+function voltarParaPacientes(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-pacientes').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.nav-item')[1].classList.add('active');
+}
+
+function abrirModalSessaoDetalhe(){
+  if(pacienteAtual) abrirModalSessaoParaPaciente(pacienteAtual.id);
+}
+
+function abrirEditarPaciente(){
+  if(!pacienteAtual) return;
+  document.getElementById('edit-pac-id').value = pacienteAtual.id;
+  document.getElementById('edit-pac-nome').value = pacienteAtual.nome||'';
+  document.getElementById('edit-pac-tel').value = pacienteAtual.telefone||'';
+  document.getElementById('edit-pac-nascimento').value = pacienteAtual.data_nascimento?.split('T')[0]||'';
+  document.getElementById('edit-pac-email').value = pacienteAtual.email||'';
+  document.getElementById('edit-pac-queixa').value = pacienteAtual.queixa_inicial||'';
+  document.getElementById('modal-editar-paciente').classList.add('show');
+}
+
+async function salvarEdicaoPaciente(){
+  const id = document.getElementById('edit-pac-id').value;
+  const nome = document.getElementById('edit-pac-nome').value.trim();
+  if(!nome){toast('Preencha o nome','red');return}
+  const btn = document.getElementById('btn-salvar-edit-pac');
+  btn.disabled=true; btn.textContent='Salvando...';
+  try{
+    const r = await fetch(`${SB}/rest/v1/${TP}?id=eq.${id}`,{
+      method:'PATCH',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({
+        nome,
+        telefone:document.getElementById('edit-pac-tel').value.trim()||null,
+        data_nascimento:document.getElementById('edit-pac-nascimento').value||null,
+        email:document.getElementById('edit-pac-email').value.trim()||null,
+        queixa_inicial:document.getElementById('edit-pac-queixa').value.trim()||null,
+      })
+    });
+    if(!r.ok) throw new Error('Erro ao salvar');
+    fecharModal('modal-editar-paciente');
+    toast('✅ Paciente atualizado!');
+    await carregarPacientes();
+    renderPacientes();
+    abrirDetalhePaciente(id);
+  }catch(e){toast('Erro: '+e.message,'red')}
+  finally{btn.disabled=false;btn.textContent='Salvar Alterações'}
+}
+
 // ── SALVAR PACIENTE (via N8N) ─────────────────────────────────────────────────
 async function salvarPaciente(){
   const nome=document.getElementById('pac-nome').value.trim();
@@ -908,7 +1331,10 @@ async function salvarPaciente(){
     fecharModal('modal-paciente');
     toast('✅ Paciente cadastrado com sucesso!');
     await carregarPacientes();
+    await carregarSessoes();
     renderDashboard(); renderPacientes();
+    // Abre detalhe do paciente recém criado
+    if(d.paciente_id) abrirDetalhePaciente(d.paciente_id);
   }catch(e){toast('Erro: '+e.message,'red')}
   finally{btn.disabled=false;btn.textContent='Salvar Paciente'}
 }
@@ -970,8 +1396,11 @@ async function salvarAgendamento(){
         paciente_id:parseInt(pacId),
         data:document.getElementById('ag-data').value,
         hora:document.getElementById('ag-hora').value+':00',
+        duracao_min:parseInt(document.getElementById('ag-duracao').value)||50,
+        tipo:document.getElementById('ag-tipo').value||'presencial',
         status:document.getElementById('ag-status').value,
         link_videochamada:document.getElementById('ag-link').value||null,
+        observacoes:document.getElementById('ag-obs').value.trim()||null,
         confirmado:document.getElementById('ag-status').value==='confirmado'
       })
     });
@@ -1364,6 +1793,7 @@ function nav(page,el){
   if(el) el.classList.add('active');
   document.getElementById(`page-${page}`)?.classList.add('active');
   if(page==='relatorios') carregarRelatorios();
+  if(page==='agenda') renderAgenda();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
