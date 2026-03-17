@@ -163,6 +163,7 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
 .ag-card.agendado{background:rgba(245,158,11,.15);border-left-color:var(--orange);color:var(--orange)}
 .ag-card.confirmado{background:rgba(34,197,94,.15);border-left-color:var(--green);color:var(--green)}
 .ag-card.cancelado{background:rgba(239,68,68,.1);border-left-color:var(--red);color:var(--red);text-decoration:line-through;opacity:.6}
+.ag-card.realizado{background:rgba(255,255,255,.06);border-left-color:rgba(255,255,255,.2);color:var(--text3)}
 .ag-card .ag-card-nome{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .ag-card .ag-card-hora{font-size:10px;opacity:.8;font-weight:600}
 
@@ -732,17 +733,44 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
 
 <!-- MODAL DETALHE AGENDAMENTO -->
 <div id="modal-ag-detalhe" class="modal">
-  <div class="modal-box" style="max-width:420px">
+  <div class="modal-box" style="max-width:480px">
     <div class="modal-header">
       <div class="modal-title" id="ag-det-titulo">Agendamento</div>
       <button class="modal-close" onclick="fecharModal('modal-ag-detalhe')">×</button>
     </div>
     <div id="ag-det-body" style="margin-bottom:20px"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn-sm" onclick="confirmarAgendamento()" id="btn-ag-confirmar">✅ Confirmar</button>
-      <button class="btn-sm" onclick="abrirSessaoDoAgendamento()" style="background:rgba(168,85,247,.2);border-color:rgba(168,85,247,.4);color:#c4b5fd">📋 Registrar Sessão</button>
-      <button class="btn-danger" onclick="cancelarAgendamento()" id="btn-ag-cancelar">Cancelar</button>
+      <button id="btn-ag-iniciar" onclick="iniciarAtendimento()" style="display:none;flex:1;padding:12px;background:linear-gradient(135deg,var(--green),#16a34a);border:none;border-radius:10px;color:#fff;font:700 14px 'Plus Jakarta Sans';cursor:pointer;align-items:center;justify-content:center;gap:6px;transition:.2s">🟢 Iniciar Atendimento</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn-sm" id="btn-ag-confirmar" onclick="confirmarAgendamento()" style="display:none">✅ Confirmar</button>
+      <button class="btn-danger" id="btn-ag-cancelar" onclick="cancelarAgendamento()">Cancelar</button>
       <button class="btn-danger" onclick="excluirAgendamentoDetalhe()" style="margin-left:auto">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRÓXIMA CONSULTA -->
+<div id="modal-proxima-consulta" class="modal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">📅 Agendar Próxima Consulta?</div>
+      <button class="modal-close" onclick="fecharModal('modal-proxima-consulta')">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Sessão salva com sucesso! Deseja já agendar a próxima consulta?</p>
+    <div class="grid-2">
+      <div class="field"><label>Data</label><input type="date" id="prox-data"></div>
+      <div class="field"><label>Horário</label><input type="time" id="prox-hora" value="09:00"></div>
+    </div>
+    <div class="field"><label>Tipo</label>
+      <select id="prox-tipo">
+        <option value="presencial">Presencial</option>
+        <option value="online">Online</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="salvarProximaConsulta()" style="flex:1">📅 Agendar</button>
+      <button onclick="fecharModal('modal-proxima-consulta')" style="flex:1;padding:14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:12px;color:var(--text2);font:600 14px 'Plus Jakarta Sans';cursor:pointer">Não agora</button>
     </div>
   </div>
 </div>
@@ -1208,28 +1236,74 @@ function abrirDetalheAgendamento(id){
   agendamentoAtual = agenda.find(a=>a.id==id);
   if(!agendamentoAtual) return;
   const pac = pacientes.find(p=>p.id==agendamentoAtual.paciente_id);
+  const totalSessoes = sessoes.filter(s=>s.paciente_id==agendamentoAtual.paciente_id).length;
+  const pendencias = sessoes.filter(s=>s.paciente_id==agendamentoAtual.paciente_id&&s.status_pagamento==='pendente');
+  const totalPendente = pendencias.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const sessaoHoje = sessoes.find(s=>s.paciente_id==agendamentoAtual.paciente_id&&s.data_sessao===agendamentoAtual.data);
+  const hoje = new Date().toISOString().split('T')[0];
+  const isHoje = agendamentoAtual.data === hoje;
+  const isFuturo = agendamentoAtual.data > hoje;
+  const isPast = agendamentoAtual.data < hoje;
+
   document.getElementById('ag-det-titulo').textContent = pac?.nome||'Agendamento';
+
   document.getElementById('ag-det-body').innerHTML = `
-    <div style="display:grid;gap:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--text3)">📅 Data</span>
+    ${isHoje?`<div style="background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--p4);text-align:center">⏰ Consulta de HOJE — ${agendamentoAtual.hora?.substring(0,5)}</div>`:''}
+    ${sessaoHoje?`<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:#4ade80;text-align:center">✅ Sessão já registrada hoje</div>`:''}
+    
+    <!-- Dados do paciente antes do atendimento -->
+    <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">👤 Paciente</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Total de sessões</div><strong style="color:var(--p3)">${totalSessoes}</strong></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Pendência financeira</div><strong style="color:${totalPendente>0?'var(--orange)':'var(--green)'}">${totalPendente>0?'R$ '+totalPendente.toFixed(2):'Em dia ✓'}</strong></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Telefone</div><strong style="font-size:12px">${pac?.telefone||'—'}</strong></div>
+      </div>
+    </div>
+
+    <!-- Dados da consulta -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">📅 Data</div>
         <strong>${fmtDate(agendamentoAtual.data)}</strong>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--text3)">⏰ Horário</span>
-        <strong>${agendamentoAtual.hora?.substring(0,5)||'—'}</strong>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">⏰ Horário</div>
+        <strong>${agendamentoAtual.hora?.substring(0,5)||'—'} · ${agendamentoAtual.duracao_min||50}min</strong>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--text3)">📍 Tipo</span>
-        <strong>${agendamentoAtual.tipo||'presencial'}</strong>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">📍 Tipo</div>
+        <span class="${agendamentoAtual.tipo==='online'?'tipo-online':'tipo-presencial'}">${agendamentoAtual.tipo||'presencial'}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--text3)">Status</span>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Status</div>
         <span class="badge badge-${agendamentoAtual.status==='confirmado'?'green':agendamentoAtual.status==='cancelado'?'red':'orange'}">${agendamentoAtual.status||'agendado'}</span>
       </div>
-      ${agendamentoAtual.link_videochamada?`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--text3)">🔗 Link</span><a href="${agendamentoAtual.link_videochamada}" target="_blank" style="color:var(--p3);font-size:13px;font-weight:600">Abrir videochamada</a></div>`:''}
-      ${agendamentoAtual.observacoes?`<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px;font-size:13px;color:var(--text2)">${agendamentoAtual.observacoes}</div>`:''}
-    </div>`;
+    </div>
+    ${agendamentoAtual.link_videochamada?`<div style="margin-bottom:12px"><a href="${agendamentoAtual.link_videochamada}" target="_blank" style="display:block;text-align:center;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:10px;color:#93c5fd;font-weight:700;font-size:13px;text-decoration:none">🎥 Abrir Videochamada</a></div>`:''}
+    ${agendamentoAtual.observacoes?`<div style="font-size:12px;color:var(--text3);background:rgba(255,255,255,.03);border-radius:8px;padding:10px;border:1px solid var(--border)">${agendamentoAtual.observacoes}</div>`:''}
+  `;
+
+  // Botões dinâmicos por contexto
+  const btnConfirmar = document.getElementById('btn-ag-confirmar');
+  const btnCancelar = document.getElementById('btn-ag-cancelar');
+  const btnIniciar = document.getElementById('btn-ag-iniciar');
+
+  // Botão principal: INICIAR ATENDIMENTO (só aparece se hoje ou passado e sem sessão registrada)
+  if(btnIniciar){
+    if(!sessaoHoje && !isFuturo){
+      btnIniciar.style.display='flex';
+      btnIniciar.textContent = isHoje ? '🟢 Iniciar Atendimento' : '📋 Registrar Sessão Retroativa';
+    } else if(sessaoHoje){
+      btnIniciar.style.display='flex';
+      btnIniciar.textContent = '📋 Ver Sessão Registrada';
+    } else {
+      btnIniciar.style.display='none';
+    }
+  }
+  if(btnConfirmar) btnConfirmar.style.display = agendamentoAtual.status!=='confirmado'&&isFuturo?'flex':'none';
+  if(btnCancelar) btnCancelar.style.display = agendamentoAtual.status!=='cancelado'?'flex':'none';
+
   document.getElementById('modal-ag-detalhe').classList.add('show');
 }
 
@@ -1267,6 +1341,57 @@ async function excluirAgendamentoDetalhe(){
   await excluirAgendamento(agendamentoAtual.id);
 }
 
+function iniciarAtendimento(){
+  if(!agendamentoAtual) return;
+  const sessaoHoje = sessoes.find(s=>s.paciente_id==agendamentoAtual.paciente_id&&s.data_sessao===agendamentoAtual.data);
+  fecharModal('modal-ag-detalhe');
+  if(sessaoHoje){
+    // Já tem sessão — abre o detalhe
+    abrirDetalheSession(sessaoHoje.id);
+    return;
+  }
+  // Abre modal de sessão pré-preenchido
+  abrirModalSessao();
+  document.getElementById('sess-pac').value = agendamentoAtual.paciente_id;
+  document.getElementById('sess-data').value = agendamentoAtual.data;
+  document.getElementById('sess-horario').value = agendamentoAtual.hora?.substring(0,5)||'09:00';
+  document.getElementById('sess-tipo').value = agendamentoAtual.tipo||'presencial';
+  // Número sequencial automático
+  const totalSessoes = sessoes.filter(s=>s.paciente_id==agendamentoAtual.paciente_id).length;
+  document.getElementById('sess-numero').value = totalSessoes + 1;
+  // Marca o agendamento como em andamento
+  window._agendamentoOrigemId = agendamentoAtual.id;
+}
+
+let _pacIdProximaConsulta = null;
+
+async function salvarProximaConsulta(){
+  const data = document.getElementById('prox-data').value;
+  const hora = document.getElementById('prox-hora').value;
+  if(!data||!hora){toast('Preencha data e horário','red');return}
+  try{
+    const r = await fetch(`${SB}/rest/v1/${TA}`,{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({
+        user_id:user.id,
+        paciente_id:_pacIdProximaConsulta,
+        data,
+        hora:hora+':00',
+        tipo:document.getElementById('prox-tipo').value||'presencial',
+        status:'agendado',
+        duracao_min:50,
+        confirmado:false
+      })
+    });
+    if(!r.ok) throw new Error('Erro ao agendar');
+    fecharModal('modal-proxima-consulta');
+    toast('✅ Próxima consulta agendada!');
+    await carregarAgenda();
+    renderAgenda(); renderDashboard();
+  }catch(e){toast('Erro: '+e.message,'red')}
+}
+
 function abrirSessaoDoAgendamento(){
   fecharModal('modal-ag-detalhe');
   if(agendamentoAtual) abrirModalSessaoParaPaciente(agendamentoAtual.paciente_id);
@@ -1274,18 +1399,37 @@ function abrirSessaoDoAgendamento(){
 
 function renderListaRelatorios(data){
   const div=document.getElementById('lista-relatorios');
-  if(!data.length){div.innerHTML='<div class="empty"><div class="empty-icon">📄</div><p>Nenhum relatório salvo</p></div>';return;}
-  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Paciente</th><th>Gerado em</th><th>Tokens</th><th>Ação</th></tr></thead><tbody>${
+  if(!data.length){
+    div.innerHTML='<div class="empty"><div class="empty-icon">📄</div><p>Nenhum relatório gerado ainda</p></div>';
+    return;
+  }
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Paciente</th><th>Gerado em</th><th>Período</th><th>Sessões</th><th>Ações</th></tr></thead><tbody>${
     data.map(r=>{
       const p=pacientes.find(x=>x.id==r.paciente_id);
-      return`<tr>
+      return`<tr class="row-clickable">
         <td><strong>${p?.nome||'Paciente #'+r.paciente_id}</strong></td>
         <td>${fmtDate(r.created_at?.split('T')[0])}</td>
-        <td>${r.tokens_usados||'—'}</td>
-        <td><button class="btn-sm" onclick="verRelatorio(${r.id})">Ver / Imprimir</button></td>
+        <td><span style="font-size:12px;color:var(--text3)">${r.periodo||'—'}</span></td>
+        <td><span class="badge badge-purple">${r.total_sessoes||r.tokens_usados||'—'}</span></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="verRelatorio(${r.id})">🖨️ Ver/Imprimir</button>
+          <button class="btn-danger" onclick="excluirRelatorio(${r.id})">Excluir</button>
+        </td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
   window._relatoriosSalvos=data;
+}
+
+async function excluirRelatorio(id){
+  if(!confirm('Excluir este relatório?')) return;
+  try{
+    await fetch(`${SB}/rest/v1/${TR}?id=eq.${id}&user_id=eq.${user.id}`,{
+      method:'DELETE',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    toast('Relatório excluído.','orange');
+    await carregarRelatorios();
+  }catch(e){toast('Erro ao excluir','red')}
 }
 
 // ── ABRIR MODAIS ──────────────────────────────────────────────────────────────
@@ -1439,17 +1583,19 @@ async function salvarEdicaoSessao(){
 }
 
 async function excluirSessaoAtual(){
-  if(!sessaoAtual||!confirm('Excluir esta sessão?')) return;
+  if(!sessaoAtual||!confirm('Excluir esta sessão? Esta ação não pode ser desfeita.')) return;
   try{
-    await fetch(`${SB}/rest/v1/${TS}?id=eq.${sessaoAtual.id}`,{
+    const r = await fetch(`${SB}/rest/v1/${TS}?id=eq.${sessaoAtual.id}&user_id=eq.${user.id}`,{
       method:'DELETE',
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
     });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||`Erro ${r.status}`);}
     fecharModal('modal-sessao-detalhe');
     toast('Sessão excluída.','orange');
     await carregarSessoes();
     renderDashboard(); renderSessoes();
-  }catch(e){toast('Erro ao excluir','red')}
+    if(pacienteAtual) abrirDetalhePaciente(pacienteAtual.id);
+  }catch(e){toast('Erro ao excluir: '+e.message,'red');console.error(e)}
 }
 
 // ── DETALHE PACIENTE ─────────────────────────────────────────────────────────
@@ -1627,12 +1773,27 @@ async function salvarSessao(){
       status_pagamento:document.getElementById('sess-status').value
     });
     if(!d.success) throw new Error(d.mensagem||'Erro');
+    // Marcar agendamento de origem como realizado
+    if(window._agendamentoOrigemId){
+      await fetch(`${SB}/rest/v1/${TA}?id=eq.${window._agendamentoOrigemId}`,{
+        method:'PATCH',
+        headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+        body:JSON.stringify({status:'realizado'})
+      });
+      window._agendamentoOrigemId = null;
+    }
     fecharModal('modal-sessao');
-    toast('✅ Sessão salva com resumo IA gerado!');
-    await carregarSessoes();
-    renderDashboard(); renderSessoes();
-    // Atualiza detalhe do paciente se estiver aberto
+    await carregarSessoes(); await carregarAgenda();
+    renderDashboard(); renderSessoes(); renderAgenda();
     if(pacienteAtual&&pacienteAtual.id==pacId) abrirDetalhePaciente(pacId);
+    toast('✅ Sessão salva com resumo IA gerado!');
+    // Oferecer próxima consulta
+    _pacIdProximaConsulta = parseInt(pacId);
+    const prox = new Date(); prox.setDate(prox.getDate()+7);
+    document.getElementById('prox-data').value = prox.toISOString().split('T')[0];
+    document.getElementById('prox-hora').value = document.getElementById('sess-horario')?.value||'09:00';
+    document.getElementById('prox-tipo').value = document.getElementById('sess-tipo')?.value||'presencial';
+    setTimeout(()=>document.getElementById('modal-proxima-consulta').classList.add('show'), 400);
   }catch(e){toast('Erro: '+e.message,'red')}
   finally{btn.disabled=false;btn.textContent='Salvar Sessão'}
 }
@@ -1702,8 +1863,11 @@ async function confirmarGerarRelatorio(){
   const btn=document.getElementById('btn-gerar-rel');
   btn.disabled=true; btn.textContent='⏳ Gerando...';
   fecharModal('modal-relatorio');
-  // Garante que está na aba de relatórios
-  nav('relatorios',document.querySelector('.nav-item:nth-child(6)'));
+  // Navega para relatórios sem depender de índice do nav
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-relatorios')?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i=>{if(i.textContent.includes('Relatório'))i.classList.add('active');});
   document.getElementById('area-relatorio').innerHTML='<div class="loading"><div class="spinner"></div><p>🤖 IA analisando sessões e gerando relatório... ~15s</p></div>';
   try{
     const d=await whFetch(WH.relatorio,{
@@ -1741,17 +1905,40 @@ async function confirmarGerarRelatorio(){
     toast('✅ Relatório gerado com sucesso!');
     await carregarRelatorios();
   }catch(e){
-    document.getElementById('area-relatorio').innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+    document.getElementById('area-relatorio').innerHTML=`
+      <div class="empty">
+        <div class="empty-icon">⚠️</div>
+        <p style="margin-bottom:12px">${e.message}</p>
+        <p style="font-size:12px;color:var(--text3)">Verifique se o N8N está online e o webhook de relatório está ativo.</p>
+        <button class="btn-primary" onclick="abrirModalRelatorio()" style="margin-top:12px">Tentar Novamente</button>
+      </div>`;
     toast('Erro: '+e.message,'red');
+    console.error('Relatório erro:',e);
   }
   finally{btn.disabled=false;btn.textContent='Gerar Relatório'}
 }
 
 function verRelatorio(id){
   const rel=window._relatoriosSalvos?.find(r=>r.id===id);
-  if(!rel?.conteudo_html){toast('Conteúdo não disponível','orange');return}
+  if(!rel){toast('Relatório não encontrado','orange');return;}
+  // Se tem conteudo_html usa ele, senão monta um básico
+  let html = rel.conteudo_html;
+  if(!html){
+    const p = pacientes.find(x=>x.id==rel.paciente_id);
+    html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>Relatório — ${p?.nome||'Paciente'}</title>
+    <style>body{font-family:Arial,sans-serif;padding:32px;color:#1e293b;max-width:800px;margin:0 auto}
+    h1{color:#5b21b6;margin-bottom:8px}p{color:#64748b;margin-bottom:24px}
+    pre{background:#f8fafc;padding:16px;border-radius:8px;white-space:pre-wrap;font-size:13px;line-height:1.7}
+    </style></head><body>
+    <h1>Relatório de Acompanhamento</h1>
+    <p>${p?.nome||'Paciente'} · Gerado em ${fmtDate(rel.created_at?.split('T')[0])}</p>
+    <pre>${rel.conteudo_texto||JSON.stringify(rel,null,2)}</pre>
+    </body></html>`;
+  }
   const w=window.open('','_blank');
-  w.document.write(rel.conteudo_html);
+  if(!w){toast('Permita popups para imprimir','orange');return;}
+  w.document.write(html);
   w.document.close();
   setTimeout(()=>w.print(),800);
 }
