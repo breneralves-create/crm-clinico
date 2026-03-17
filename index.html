@@ -103,11 +103,25 @@ tbody tr:hover{background:rgba(255,255,255,.02)}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
 /* BADGES */
-.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
-.badge-orange{background:rgba(245,158,11,.15);color:var(--orange)}
-.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
-.badge-purple{background:rgba(124,58,237,.2);color:var(--p4)}
+.badge{display:inline-flex;align-items:center;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
+.badge-green{background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
+.badge-orange{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
+.badge-red{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.badge-purple{background:rgba(124,58,237,.25);color:#c4b5fd;border:1px solid rgba(124,58,237,.35)}
+.badge-blue{background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.25)}
+.badge-gray{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1)}
+
+/* STATUS ROWS */
+tr.status-pago td:first-child{border-left:3px solid var(--green)}
+tr.status-pendente td:first-child{border-left:3px solid var(--orange)}
+tr.status-cancelado td:first-child{border-left:3px solid var(--red)}
+tr.row-hoje{background:rgba(124,58,237,.07)!important}
+tr.row-clickable{cursor:pointer;transition:.15s}
+tr.row-clickable:hover{background:rgba(124,58,237,.1)!important}
+
+/* TIPO BADGE */
+.tipo-presencial{color:#a78bfa;font-size:11px;font-weight:600;background:rgba(124,58,237,.15);padding:2px 8px;border-radius:6px}
+.tipo-online{color:#93c5fd;font-size:11px;font-weight:600;background:rgba(59,130,246,.15);padding:2px 8px;border-radius:6px}
 
 /* UTILS */
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
@@ -544,6 +558,62 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
 
 <!-- ═══════════════════════════════════════════════ MODAIS -->
 
+<!-- MODAL DETALHE SESSÃO -->
+<div id="modal-sessao-detalhe" class="modal">
+  <div class="modal-box" style="max-width:680px">
+    <div class="modal-header">
+      <div class="modal-title">📋 <span id="sd-titulo">Sessão</span></div>
+      <button class="modal-close" onclick="fecharModal('modal-sessao-detalhe')">×</button>
+    </div>
+    <div id="sd-body"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
+      <button class="btn-primary" onclick="fecharModal('modal-sessao-detalhe');abrirEditarSessao(sessaoAtual?.id)" style="padding:8px 16px">✏️ Editar Sessão</button>
+      <button class="btn-sm" onclick="fecharModal('modal-sessao-detalhe');if(sessaoAtual)abrirDetalhePaciente(sessaoAtual.paciente_id)">👤 Ver Paciente</button>
+      <button class="btn-danger" onclick="excluirSessaoAtual()" style="margin-left:auto">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR SESSÃO -->
+<div id="modal-editar-sessao" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Editar Sessão</div>
+      <button class="modal-close" onclick="fecharModal('modal-editar-sessao')">×</button>
+    </div>
+    <input type="hidden" id="edit-sess-id">
+    <div class="grid-2">
+      <div class="field"><label>Data *</label><input type="date" id="edit-sess-data"></div>
+      <div class="field"><label>Horário</label><input type="time" id="edit-sess-horario"></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Tipo</label>
+        <select id="edit-sess-tipo">
+          <option value="presencial">Presencial</option>
+          <option value="online">Online</option>
+        </select>
+      </div>
+      <div class="field"><label>Nº da Sessão</label><input type="text" id="edit-sess-numero" placeholder="Ex: 1, 2..."></div>
+    </div>
+    <div class="field"><label>Queixas Principais</label><textarea id="edit-sess-queixas"></textarea></div>
+    <div class="field"><label>Intervenções</label><textarea id="edit-sess-intervencoes"></textarea></div>
+    <div class="field"><label>Evolução Observada</label><textarea id="edit-sess-evolucao"></textarea></div>
+    <div class="field"><label>Pontos de Atenção</label><textarea id="edit-sess-atencao"></textarea></div>
+    <div class="field"><label>Próximos Passos</label><textarea id="edit-sess-proximos"></textarea></div>
+    <div class="field"><label>🔒 Anotação Clínica Privada</label><textarea id="edit-sess-anotacao" style="border-color:rgba(124,58,237,.3)"></textarea></div>
+    <div class="grid-2">
+      <div class="field"><label>Valor (R$)</label><input type="number" id="edit-sess-valor" step="0.01"></div>
+      <div class="field"><label>Status Pagamento</label>
+        <select id="edit-sess-status">
+          <option value="pendente">Pendente</option>
+          <option value="pago">Pago</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" id="btn-salvar-edit-sess" onclick="salvarEdicaoSessao()">Salvar Alterações</button>
+  </div>
+</div>
+
 <!-- MODAL EDITAR PACIENTE -->
 <div id="modal-editar-paciente" class="modal">
   <div class="modal-box">
@@ -925,16 +995,30 @@ function renderDashboard(){
     document.getElementById('kpi-prox').textContent=prox.hora?.substring(0,5)||'--:--';
     document.getElementById('kpi-prox-pac').textContent=pac?.nome||'—';
   }
-  // Sessões hoje
+  // Sessões hoje + Agenda hoje juntos
   const sessH=sessoes.filter(s=>s.data_sessao===hoje);
+  const agHoje=agenda.filter(a=>a.data===hoje&&a.status!=='cancelado').sort((a,b)=>a.hora?.localeCompare(b.hora||''));
   const dH=document.getElementById('dash-sessoes-hoje');
-  if(!sessH.length){
-    dH.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>Nenhuma sessão registrada hoje</p></div>';
+  if(!agHoje.length && !sessH.length){
+    dH.innerHTML='<div class="empty"><div class="empty-icon">☀️</div><p>Nenhuma atividade registrada para hoje</p></div>';
   } else {
-    dH.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Paciente</th><th>Queixas</th><th>Status Pgto</th></tr></thead><tbody>${
-      sessH.map(s=>{const p=pacientes.find(x=>x.id==s.paciente_id);
-        return`<tr><td><strong>${p?.nome||'—'}</strong></td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td><td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td></tr>`;
-      }).join('')}</tbody></table></div>`;
+    // Monta linha do tempo do dia
+    const itens = agHoje.map(a=>{
+      const p=pacientes.find(x=>x.id==a.paciente_id);
+      const sessao=sessoes.find(s=>s.paciente_id==a.paciente_id&&s.data_sessao===hoje);
+      return`<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='rgba(124,58,237,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'" onclick="abrirDetalheAgendamento(${a.id})">
+        <div style="font-size:18px;font-weight:800;color:var(--p3);min-width:52px;text-align:center">${a.hora?.substring(0,5)||'--:--'}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px">${p?.nome||'—'}</div>
+          <div style="font-size:12px;color:var(--text3)">${a.tipo||'presencial'} · ${a.duracao_min||50} min</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${sessao?'<span class="badge badge-green">✓ Sessão registrada</span>':'<span class="badge badge-orange">Aguardando</span>'}
+          <span class="badge badge-${a.status==='confirmado'?'green':a.status==='cancelado'?'red':'blue'}">${a.status||'agendado'}</span>
+        </div>
+      </div>`;
+    }).join('');
+    dH.innerHTML = itens || '<div class="empty"><div class="empty-icon">📋</div><p>Nenhum agendamento hoje, mas há sessões registradas</p></div>';
   }
   // Pacientes recentes
   const dP=document.getElementById('dash-pacientes-recentes');
@@ -978,18 +1062,21 @@ function renderSessoes(){
   if(!sessoes.length){
     div.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';return;
   }
-  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Tipo</th><th>Nº</th><th>Queixas</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
+  const hoje=new Date().toISOString().split('T')[0];
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Tipo</th><th>Nº</th><th>Queixas</th><th>Valor</th><th>Pgto</th><th></th></tr></thead><tbody>${
     sessoes.slice(0,50).map(s=>{
       const p=pacientes.find(x=>x.id==s.paciente_id);
-      return`<tr>
-        <td>${fmtDate(s.data_sessao)}</td>
+      const isHoje=s.data_sessao===hoje;
+      return`<tr class="row-clickable${isHoje?' row-hoje':''} status-${s.status_pagamento||'pendente'}" onclick="abrirDetalheSession(${s.id})">
+        <td><strong>${fmtDate(s.data_sessao)}</strong>${isHoje?'<span class="badge badge-purple" style="margin-left:6px">Hoje</span>':''}</td>
         <td>${s.horario?s.horario.substring(0,5):'—'}</td>
-        <td><strong style="cursor:pointer;color:var(--p4)" onclick="abrirDetalhePaciente(${p?.id})">${p?.nome||'—'}</strong></td>
-        <td><span style="font-size:11px;color:var(--text3)">${s.tipo_sessao||'presencial'}</span></td>
-        <td><span class="badge badge-purple">${s.numero_sessao||'—'}</span></td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
-        <td>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
-        <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td>
+        <td><strong>${p?.nome||'—'}</strong></td>
+        <td><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
+        <td><span class="badge badge-gray">${s.numero_sessao||'—'}</span></td>
+        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">${s.queixas_principais||'—'}</td>
+        <td><strong>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
+        <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></td>
+        <td onclick="event.stopPropagation()"><button class="btn-sm" onclick="abrirEditarSessao(${s.id})">✏️</button></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
 }
@@ -1261,6 +1348,109 @@ function togglePeriodoCustom(){
 }
 
 function fecharModal(id){document.getElementById(id).classList.remove('show')}
+
+// ── DETALHE E EDIÇÃO DE SESSÃO ────────────────────────────────────────────────
+let sessaoAtual = null;
+
+function abrirDetalheSession(id){
+  sessaoAtual = sessoes.find(s=>s.id==id);
+  if(!sessaoAtual) return;
+  const p = pacientes.find(x=>x.id==sessaoAtual.paciente_id);
+  document.getElementById('sd-titulo').textContent =
+    `${p?.nome||'Paciente'} — ${fmtDate(sessaoAtual.data_sessao)}`;
+
+  const campo = (label,val,destaque=false)=>val?`
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">${label}</div>
+      <div style="font-size:13px;color:${destaque?'var(--p4)':'var(--text2)'};line-height:1.6;background:rgba(255,255,255,.03);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">${val}</div>
+    </div>`:'';
+
+  document.getElementById('sd-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;padding:14px;background:rgba(255,255,255,.03);border-radius:12px;border:1px solid var(--border)">
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Data</div><strong>${fmtDate(sessaoAtual.data_sessao)}</strong></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Horário</div><strong>${sessaoAtual.horario?.substring(0,5)||'—'}</strong></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Tipo</div><span class="${sessaoAtual.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${sessaoAtual.tipo_sessao||'presencial'}</span></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Sessão Nº</div><span class="badge badge-gray">${sessaoAtual.numero_sessao||'—'}</span></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Valor</div><strong>R$ ${(parseFloat(sessaoAtual.valor)||0).toFixed(2)}</strong></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Pagamento</div><span class="badge badge-${sessaoAtual.status_pagamento==='pago'?'green':'orange'}">${sessaoAtual.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></div>
+    </div>
+    ${campo('Queixas Principais', sessaoAtual.queixas_principais)}
+    ${campo('Intervenções Realizadas', sessaoAtual.intervencoes)}
+    ${campo('Evolução Observada', sessaoAtual.evolucao)}
+    ${campo('Pontos de Atenção', sessaoAtual.pontos_atencao)}
+    ${campo('Próximos Passos', sessaoAtual.proximos_passos)}
+    ${sessaoAtual.resumo_ia?`<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--p4);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🤖 Resumo IA</div><div style="font-size:13px;color:var(--text2);line-height:1.6;background:rgba(124,58,237,.06);border-radius:8px;padding:12px;border:1px solid rgba(124,58,237,.2)">${sessaoAtual.resumo_ia}</div></div>`:''}
+    ${sessaoAtual.anotacao_clinica?`<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🔒 Anotação Clínica Privada</div><div style="font-size:13px;color:var(--text2);line-height:1.6;background:rgba(245,158,11,.06);border-radius:8px;padding:12px;border:1px solid rgba(245,158,11,.2)">${sessaoAtual.anotacao_clinica}</div></div>`:''}
+  `;
+  document.getElementById('modal-sessao-detalhe').classList.add('show');
+}
+
+function abrirEditarSessao(id){
+  sessaoAtual = sessoes.find(s=>s.id==id);
+  if(!sessaoAtual) return;
+  fecharModal('modal-sessao-detalhe');
+  document.getElementById('edit-sess-id').value = sessaoAtual.id;
+  document.getElementById('edit-sess-data').value = sessaoAtual.data_sessao?.split('T')[0]||'';
+  document.getElementById('edit-sess-horario').value = sessaoAtual.horario?.substring(0,5)||'';
+  document.getElementById('edit-sess-tipo').value = sessaoAtual.tipo_sessao||'presencial';
+  document.getElementById('edit-sess-numero').value = sessaoAtual.numero_sessao||'';
+  document.getElementById('edit-sess-queixas').value = sessaoAtual.queixas_principais||'';
+  document.getElementById('edit-sess-intervencoes').value = sessaoAtual.intervencoes||'';
+  document.getElementById('edit-sess-evolucao').value = sessaoAtual.evolucao||'';
+  document.getElementById('edit-sess-atencao').value = sessaoAtual.pontos_atencao||'';
+  document.getElementById('edit-sess-proximos').value = sessaoAtual.proximos_passos||'';
+  document.getElementById('edit-sess-anotacao').value = sessaoAtual.anotacao_clinica||'';
+  document.getElementById('edit-sess-valor').value = sessaoAtual.valor||'';
+  document.getElementById('edit-sess-status').value = sessaoAtual.status_pagamento||'pendente';
+  document.getElementById('modal-editar-sessao').classList.add('show');
+}
+
+async function salvarEdicaoSessao(){
+  const id = document.getElementById('edit-sess-id').value;
+  const btn = document.getElementById('btn-salvar-edit-sess');
+  btn.disabled=true; btn.textContent='Salvando...';
+  try{
+    const r = await fetch(`${SB}/rest/v1/${TS}?id=eq.${id}&user_id=eq.${user.id}`,{
+      method:'PATCH',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({
+        data_sessao:document.getElementById('edit-sess-data').value,
+        horario:document.getElementById('edit-sess-horario').value+':00',
+        tipo_sessao:document.getElementById('edit-sess-tipo').value,
+        numero_sessao:document.getElementById('edit-sess-numero').value.trim()||null,
+        queixas_principais:document.getElementById('edit-sess-queixas').value.trim()||null,
+        intervencoes:document.getElementById('edit-sess-intervencoes').value.trim()||null,
+        evolucao:document.getElementById('edit-sess-evolucao').value.trim()||null,
+        pontos_atencao:document.getElementById('edit-sess-atencao').value.trim()||null,
+        proximos_passos:document.getElementById('edit-sess-proximos').value.trim()||null,
+        anotacao_clinica:document.getElementById('edit-sess-anotacao').value.trim()||null,
+        valor:parseFloat(document.getElementById('edit-sess-valor').value)||null,
+        status_pagamento:document.getElementById('edit-sess-status').value,
+      })
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||`Erro ${r.status}`);}
+    fecharModal('modal-editar-sessao');
+    toast('✅ Sessão atualizada!');
+    await carregarSessoes();
+    renderSessoes();
+    if(pacienteAtual) abrirDetalhePaciente(pacienteAtual.id);
+  }catch(e){toast('Erro: '+e.message,'red')}
+  finally{btn.disabled=false;btn.textContent='Salvar Alterações'}
+}
+
+async function excluirSessaoAtual(){
+  if(!sessaoAtual||!confirm('Excluir esta sessão?')) return;
+  try{
+    await fetch(`${SB}/rest/v1/${TS}?id=eq.${sessaoAtual.id}`,{
+      method:'DELETE',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    fecharModal('modal-sessao-detalhe');
+    toast('Sessão excluída.','orange');
+    await carregarSessoes();
+    renderDashboard(); renderSessoes();
+  }catch(e){toast('Erro ao excluir','red')}
+}
 
 // ── DETALHE PACIENTE ─────────────────────────────────────────────────────────
 let pacienteAtual = null;
