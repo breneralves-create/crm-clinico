@@ -765,6 +765,7 @@ async function login(){
     if(!r.ok){err.textContent='E-mail ou senha incorretos';err.classList.add('show');return}
     token=d.access_token; user=d.user;
     localStorage.setItem('cf_token',token);
+    localStorage.setItem('cf_refresh',d.refresh_token);
     localStorage.setItem('cf_user',JSON.stringify(user));
     iniciarApp();
   }catch(e){err.textContent='Erro de conexão';err.classList.add('show')}
@@ -792,6 +793,7 @@ async function registro(){
     if(d.access_token){
       token=d.access_token; user=d.user;
       localStorage.setItem('cf_token',token);
+      localStorage.setItem('cf_refresh',d.refresh_token);
       localStorage.setItem('cf_user',JSON.stringify(user));
       iniciarApp();
     } else {
@@ -805,10 +807,35 @@ async function registro(){
 
 function logout(){
   if(!confirm('Deseja sair?'))return;
-  localStorage.removeItem('cf_token'); localStorage.removeItem('cf_user');
+  localStorage.removeItem('cf_token');
+  localStorage.removeItem('cf_refresh');
+  localStorage.removeItem('cf_user');
   token=null; user=null;
+  clearInterval(window._refreshTimer);
   document.getElementById('app').style.display='none';
   document.getElementById('login-page').style.display='flex';
+}
+
+async function refreshToken(){
+  const rt = localStorage.getItem('cf_refresh');
+  if(!rt) return;
+  try{
+    const r = await fetch(`${SB}/auth/v1/token?grant_type=refresh_token`,{
+      method:'POST',
+      headers:{'apikey':SK,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:rt})
+    });
+    if(!r.ok) throw new Error('refresh falhou');
+    const d = await r.json();
+    token = d.access_token;
+    localStorage.setItem('cf_token', token);
+    localStorage.setItem('cf_refresh', d.refresh_token);
+    localStorage.setItem('cf_user', JSON.stringify(d.user));
+    user = d.user;
+  }catch(e){
+    console.warn('Refresh token falhou, fazendo logout', e);
+    logout();
+  }
 }
 
 function toggleForm(){
@@ -827,6 +854,9 @@ function iniciarApp(){
   document.getElementById('user-avatar').textContent=nome[0].toUpperCase();
   document.getElementById('user-name').textContent=user.user_metadata?.nome||nome;
   document.getElementById('user-role').textContent=user.user_metadata?.crp?`CRP ${user.user_metadata.crp}`:'Clique para sair';
+  // Refresh automático a cada 50 minutos (token expira em 60min)
+  clearInterval(window._refreshTimer);
+  window._refreshTimer = setInterval(refreshToken, 50 * 60 * 1000);
   carregarTudo();
   carregarFotoDoSupabase();
 }
@@ -1853,7 +1883,16 @@ window.addEventListener('DOMContentLoaded',()=>{
   carregarConfiguracoesSalvas();
   const t=localStorage.getItem('cf_token');
   const u=localStorage.getItem('cf_user');
-  if(t&&u){token=t;user=JSON.parse(u);iniciarApp();}
+  const rt=localStorage.getItem('cf_refresh');
+  if(t&&u){
+    token=t; user=JSON.parse(u);
+    // Refresh imediato ao carregar para garantir token válido
+    if(rt){
+      refreshToken().then(()=>iniciarApp());
+    } else {
+      iniciarApp();
+    }
+  }
   document.getElementById('senha').addEventListener('keypress',e=>{if(e.key==='Enter')login()});
   document.getElementById('reg-senha').addEventListener('keypress',e=>{if(e.key==='Enter')registro()});
 });
