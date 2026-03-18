@@ -620,11 +620,22 @@ body.light thead th{background:var(--bg3)}
     <div id="page-sessoes" class="page">
       <div class="page-header">
         <h1>Sessões Realizadas</h1>
-        <div class="hactions"></div>
       </div>
-      <div class="card">
-        <div class="table-wrap"><div id="lista-sessoes"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div></div>
+      <!-- Filtros -->
+      <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="sess-busca" placeholder="🔍 Buscar paciente..." oninput="renderSessoes()" style="flex:1;min-width:180px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:14px 'Sora';outline:none">
+        <select id="sess-filtro-pgto" onchange="renderSessoes()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:13px 'Sora';cursor:pointer">
+          <option value="">Todos os pagamentos</option>
+          <option value="pago">✓ Pagos</option>
+          <option value="pendente">⏳ Pendentes</option>
+        </select>
+        <select id="sess-filtro-tipo" onchange="renderSessoes()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:13px 'Sora';cursor:pointer">
+          <option value="">Todos os tipos</option>
+          <option value="presencial">Presencial</option>
+          <option value="online">Online</option>
+        </select>
       </div>
+      <div id="lista-sessoes"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div>
     </div>
 
     <!-- ── AGENDA ─────────────────────────────────────────── -->
@@ -1454,6 +1465,10 @@ function renderSessoes(){
     div.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';return;
   }
   const hoje=localDateStr();
+  // Filtros
+  const busca=(document.getElementById('sess-busca')?.value||'').toLowerCase();
+  const filtroPgto=document.getElementById('sess-filtro-pgto')?.value||'';
+  const filtroTipo=document.getElementById('sess-filtro-tipo')?.value||'';
   // Pré-computa número sequencial por paciente (fallback se numero_sessao não veio do banco)
   const contadorPac={};
   // sessoes já vem ordenado desc; invertemos para contar
@@ -1463,34 +1478,101 @@ function renderSessoes(){
     contadorPac[pid]=(contadorPac[pid]||0)+1;
     s._seq=contadorPac[pid];
   });
-  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Tipo</th><th>Nº</th><th>Queixas</th><th>Valor</th><th>Pgto</th><th></th></tr></thead><tbody>${
-    sessoes.slice(0,50).map(s=>{
-      const p=pacientes.find(x=>x.id==s.paciente_id);
-      const isHoje=s.data_sessao===hoje;
-      // Horário: tenta campo horario, senão busca agendamento do mesmo dia
-      let hrExib = '—';
-      if(s.horario && s.horario.length>=5) hrExib = s.horario.substring(0,5);
-      else {
-        const ag=agenda.find(a=>a.paciente_id==s.paciente_id&&a.data===s.data_sessao);
-        if(ag?.hora) hrExib=ag.hora.substring(0,5);
-      }
-      // Nº sessão: usa campo do banco, senão usa sequencial calculado
-      const numSess = s.numero_sessao || s._seq || '—';
-      return`<tr class="row-clickable${isHoje?' row-hoje':''} status-${s.status_pagamento||'pendente'}" onclick="abrirDetalheSession(${s.id})">
-        <td><strong>${fmtDate(s.data_sessao)}</strong>${isHoje?'<span class="badge badge-purple" style="margin-left:6px">Hoje</span>':''}</td>
-        <td><strong>${hrExib}</strong></td>
-        <td><strong>${p?.nome||'—'}</strong></td>
-        <td><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
-        <td><span class="badge badge-purple">${numSess}</span></td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">${s.queixas_principais||'—'}</td>
-        <td><strong style="color:${(parseFloat(s.valor)||0)>0?'var(--accent)':'var(--text3)'}">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
-        <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></td>
-        <td onclick="event.stopPropagation()" style="display:flex;gap:4px;align-items:center">
-          <button class="btn-sm" onclick="abrirEditarSessao(${s.id})" title="Editar">✏️</button>
-          <button class="btn-danger" onclick="excluirSessaoDireto(${s.id})" title="Excluir sessão">🗑️</button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody></table></div>`;
+  // Agrupa sessões por paciente com filtros
+  const grupos = {};
+  sessoes.forEach(s=>{
+    const pid = s.paciente_id;
+    const p = pacientes.find(x=>x.id==pid);
+    // Filtro busca por nome
+    if(busca && !(p?.nome||'').toLowerCase().includes(busca)) return;
+    // Filtro pagamento
+    if(filtroPgto && s.status_pagamento !== filtroPgto) return;
+    // Filtro tipo
+    if(filtroTipo && (s.tipo_sessao||'presencial') !== filtroTipo) return;
+    if(!grupos[pid]) grupos[pid] = [];
+    grupos[pid].push(s);
+  });
+
+  let html = '';
+  Object.keys(grupos).forEach(pid=>{
+    const p = pacientes.find(x=>x.id==pid);
+    const ss = grupos[pid];
+    const total = ss.length;
+    const totalValor = ss.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+    const totalPago = ss.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+    const totalPendente = totalValor - totalPago;
+    const ultimaSessao = ss[0]; // já vem ordenado desc
+
+    html += `
+      <div style="margin-bottom:24px">
+        <!-- Cabeçalho do paciente -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px 12px 0 0;cursor:pointer" onclick="abrirDetalhePaciente(${pid})">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">${(p?.nome||'?')[0].toUpperCase()}</div>
+            <div>
+              <div style="font-weight:800;font-size:14px">${p?.nome||'Paciente #'+pid}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:1px">Última sessão: ${fmtDate(ultimaSessao?.data_sessao)} · ${total} ${total===1?'sessão':'sessões'} no total</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:center">
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Total</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">R$ ${totalValor.toFixed(2)}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Pago</div>
+              <div style="font-size:14px;font-weight:800;color:var(--accent)">R$ ${totalPago.toFixed(2)}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Pendente</div>
+              <div style="font-size:14px;font-weight:800;color:${totalPendente>0?'var(--warn)':'var(--text3)'}">R$ ${totalPendente.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+        <!-- Tabela de sessões do paciente -->
+        <div style="border:1px solid rgba(124,58,237,.15);border-top:none;border-radius:0 0 12px 12px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:rgba(255,255,255,.02)">
+                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Data</th>
+                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Horário</th>
+                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Tipo</th>
+                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Nº</th>
+                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Queixas</th>
+                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Valor</th>
+                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Pgto</th>
+                <th style="padding:8px 12px;border-bottom:1px solid var(--border)"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ss.map(s=>{
+                const isHoje=s.data_sessao===hoje;
+                let hrExib='—';
+                if(s.horario&&s.horario.length>=5) hrExib=s.horario.substring(0,5);
+                else{ const ag=agenda.find(a=>a.paciente_id==s.paciente_id&&a.data===s.data_sessao); if(ag?.hora) hrExib=ag.hora.substring(0,5); }
+                const numSess=s.numero_sessao||s._seq||'—';
+                return`<tr class="row-clickable${isHoje?' row-hoje':''}" style="border-bottom:1px solid var(--border)" onclick="abrirDetalheSession(${s.id})">
+                  <td style="padding:10px 12px"><strong>${fmtDate(s.data_sessao)}</strong>${isHoje?'<span class="badge badge-purple" style="margin-left:6px;font-size:9px">Hoje</span>':''}</td>
+                  <td style="padding:10px 12px;font-family:monospace;font-size:13px">${hrExib}</td>
+                  <td style="padding:10px 12px"><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
+                  <td style="padding:10px 12px"><span class="badge badge-gray">${numSess}</span></td>
+                  <td style="padding:10px 12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:12px">${s.queixas_principais||'—'}</td>
+                  <td style="padding:10px 12px"><strong style="color:${(parseFloat(s.valor)||0)>0?'var(--accent)':'var(--text3)'}">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
+                  <td style="padding:10px 12px"><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></td>
+                  <td style="padding:10px 12px" onclick="event.stopPropagation()">
+                    <div style="display:flex;gap:4px">
+                      <button class="btn-sm" onclick="abrirEditarSessao(${s.id})" title="Editar">✏️</button>
+                      <button class="btn-danger" onclick="excluirSessaoDireto(${s.id})" title="Excluir">🗑️</button>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  });
+  div.innerHTML = html || '<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';
 }
 
 // ── AGENDA SEMANAL ────────────────────────────────────────────────────────────
@@ -2397,38 +2479,116 @@ async function confirmarGerarRelatorio(){
   document.getElementById('page-relatorios')?.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i=>{if(i.textContent.includes('Relatório'))i.classList.add('active');});
   document.getElementById('area-relatorio').innerHTML='<div class="loading"><div class="spinner"></div><p>🤖 IA analisando sessões e gerando relatório... ~15s</p></div>';
+  // Carrega dados do profissional do localStorage para incluir no relatório
+  let cfgProf = {};
+  try{ cfgProf = JSON.parse(localStorage.getItem('cf_config')||'{}'); }catch(e){}
+  const cfgSis = {};
+  try{ Object.assign(cfgSis, JSON.parse(localStorage.getItem('cf_sistema')||'{}')); }catch(e){}
+
   try{
+    // Busca dados do profissional direto do banco para evitar erro de coluna no N8N
+    let profDB = {};
+    try{
+      const rProf = await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,registro_profissional,nome_clinica`,{
+        headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+      });
+      if(rProf.ok){ const dp=await rProf.json(); if(dp[0]) profDB=dp[0]; }
+    }catch(e){}
+
+    const nomeProfissional = profDB.nome_completo || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
+    const registroProfissional = profDB.registro_profissional || cfgProf.registro || user.user_metadata?.crp || '';
+    const nomeClinica = profDB.nome_clinica || cfgProf.nome_clinica || 'CatherFlow';
+    const cfgSisObj = {};
+    try{ Object.assign(cfgSisObj, JSON.parse(localStorage.getItem('cf_sistema')||'{}')); }catch(e){}
+
     const d=await whFetch(WH.relatorio,{
-      user_id:user.id,paciente_id:pac.id,
-      tipo:'acompanhamento',data_inicio:dataInicio,data_fim:dataFim
+      user_id:user.id,
+      paciente_id:pac.id,
+      tipo:'acompanhamento',
+      data_inicio:dataInicio,
+      data_fim:dataFim,
+      // Enviamos os dados do profissional direto — N8N não precisa fazer query em t2_usuarios
+      nome_profissional: nomeProfissional,
+      registro_profissional: registroProfissional,
+      nome_clinica: nomeClinica,
+      valor_sessao_padrao: cfgSisObj.valor || ''
     });
     if(!d.success) throw new Error(d.mensagem||'Erro ao gerar relatório');
     const s=d.secoes||{};
     const hist=d.historico_sessoes||[];
     const periodoLabel={mes:'Último mês',trimestre:'Últimos 3 meses',semestre:'Últimos 6 meses',ano:'Último ano',tudo:'Todo o histórico',custom:'Período personalizado'}[periodo];
-    window._relAtual={...d, periodoLabel, pac};
+    window._relAtual={...d, periodoLabel, pac, cfgProf};
+
+    const secaoCard = (titulo, conteudo, cor='124,58,237') => conteudo ? `
+      <div style="background:rgba(${cor},.06);border:1px solid rgba(${cor},.18);border-radius:12px;padding:16px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:800;color:rgba(${cor},1);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${titulo}</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text2)">${conteudo}</div>
+      </div>` : '';
+
+    const listaCard = (titulo, itens, cor='124,58,237') => itens?.length ? `
+      <div style="background:rgba(${cor},.06);border:1px solid rgba(${cor},.18);border-radius:12px;padding:16px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:800;color:rgba(${cor},1);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${titulo}</div>
+        <ul style="padding-left:16px;margin:0">${itens.map(i=>`<li style="font-size:13px;line-height:1.9;color:var(--text2)">${i}</li>`).join('')}</ul>
+      </div>` : '';
+
     document.getElementById('area-relatorio').innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:17px;font-weight:800">${d.paciente}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:3px">${periodoLabel} · ${d.total_sessoes} sessões analisadas</div>
+      <!-- Cabeçalho do relatório -->
+      <div style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(109,40,217,.08));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:20px;margin-bottom:20px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:20px;font-weight:800;margin-bottom:4px">${d.paciente||pac.nome}</div>
+            <div style="font-size:12px;color:var(--text3)">${periodoLabel} · ${d.total_sessoes||hist.length} sessões analisadas · Gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">${cfgProf.nome_profissional||''} ${cfgProf.registro?'· '+cfgProf.registro:''}</div>
+          </div>
+          <button class="btn-primary" onclick="imprimirRelatorio()" style="flex-shrink:0">🖨️ Imprimir PDF</button>
         </div>
-        <button class="btn-primary" onclick="imprimirRelatorio()">🖨️ Imprimir PDF</button>
+        <!-- KPIs resumo -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:16px">
+          <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--p3)">${d.total_sessoes||hist.length}</div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Sessões</div>
+          </div>
+          <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--accent)">${d.evolucao_geral||'—'}</div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Evolução</div>
+          </div>
+          <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--warn)">${d.pontos_atencao_count||s.s3_persiste?'Sim':'—'}</div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Atenção</div>
+          </div>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        ${[['Visão Geral',s.s1_visao_geral],['O que Melhorou',s.s2_melhorou],['O que Persiste',s.s3_persiste],['O que Foi Solucionado',s.s4_solucionado]].map(([t,c])=>`
-          <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.12);border-radius:12px;padding:14px">
-            <div style="font-size:10px;font-weight:700;color:var(--p3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">${t}</div>
-            <div style="font-size:12px;line-height:1.7;color:var(--text2)">${c||'—'}</div>
-          </div>`).join('')}
+
+      <!-- Seções clínicas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+        ${secaoCard('📋 Visão Geral do Período', s.s1_visao_geral)}
+        ${secaoCard('✅ O que Melhorou', s.s2_melhorou, '34,197,94')}
       </div>
-      ${s.s5_intervencoes?.length?`<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--p3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Intervenções</div><ul style="padding-left:18px">${s.s5_intervencoes.map(i=>`<li style="font-size:12px;line-height:1.8;color:var(--text2)">${i}</li>`).join('')}</ul></div>`:''}
-      ${s.s6_recomendacoes?.length?`<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--p3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Recomendações</div><ul style="padding-left:18px">${s.s6_recomendacoes.map(i=>`<li style="font-size:12px;line-height:1.8;color:var(--text2)">${i}</li>`).join('')}</ul></div>`:''}
-      ${hist.length?`<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px"><div style="font-weight:700;font-size:13px;margin-bottom:12px">Histórico de Sessões</div>${hist.map(h=>`
-        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px">
-          <div style="font-weight:700;font-size:12px;color:var(--p4);margin-bottom:6px">Sessão ${h.sessao} — ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
-          ${h.resumo_ia?`<div style="font-size:12px;color:var(--text2);line-height:1.6;background:rgba(34,197,94,.06);border-radius:8px;padding:10px;border:1px solid rgba(34,197,94,.2)">🤖 ${h.resumo_ia}</div>`:''}
-        </div>`).join('')}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+        ${secaoCard('⚠️ O que Persiste', s.s3_persiste, '245,158,11')}
+        ${secaoCard('🎯 O que Foi Solucionado', s.s4_solucionado, '59,130,246')}
+      </div>
+      ${listaCard('🔧 Intervenções Realizadas', s.s5_intervencoes)}
+      ${listaCard('💡 Recomendações', s.s6_recomendacoes, '168,85,247')}
+
+      <!-- Histórico detalhado -->
+      ${hist.length?`
+        <div style="border-top:1px solid var(--border);padding-top:20px;margin-top:8px">
+          <div style="font-weight:800;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            📚 Histórico Detalhado de Sessões
+            <span class="badge badge-purple">${hist.length} sessões</span>
+          </div>
+          ${hist.map((h,i)=>`
+            <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-left:3px solid var(--p1);border-radius:0 10px 10px 0;padding:14px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="font-weight:700;font-size:13px;color:var(--p4)">Sessão ${h.numero_sessao||h.sessao||i+1} — ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
+                ${h.status_pagamento?`<span class="badge badge-${h.status_pagamento==='pago'?'green':'orange'}">${h.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span>`:''}
+              </div>
+              ${h.queixas_principais?`<div style="font-size:12px;color:var(--text3);margin-bottom:6px"><strong>Queixas:</strong> ${h.queixas_principais}</div>`:''}
+              ${h.evolucao?`<div style="font-size:12px;color:var(--text3);margin-bottom:6px"><strong>Evolução:</strong> ${h.evolucao}</div>`:''}
+              ${h.resumo_ia?`<div style="font-size:12px;color:var(--text2);line-height:1.7;background:rgba(34,197,94,.06);border-radius:8px;padding:10px;border:1px solid rgba(34,197,94,.15);margin-top:8px">🤖 <strong>Resumo IA:</strong> ${h.resumo_ia}</div>`:''}
+            </div>`).join('')}
+        </div>`:''}
     `;
     toast('✅ Relatório gerado com sucesso!');
     await carregarRelatorios();
@@ -2474,50 +2634,138 @@ function verRelatorio(id){
 function imprimirRelatorio(){
   if(!window._relAtual){toast('Nenhum relatório gerado','orange');return}
   const d=window._relAtual; const s=d.secoes||{}; const hist=d.historico_sessoes||[];
-  const profNome=user.user_metadata?.nome||user.email;
-  const crp=user.user_metadata?.crp?`CRP: ${user.user_metadata.crp}`:'';
-  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório — ${d.paciente}</title>
-  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b}
-  .hdr{background:#5b21b6;color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #f97316}
-  .hdr-brand{font-size:18px;font-weight:800}.hdr-sub{font-size:9px;opacity:.8;margin-top:2px}.hdr-date{font-size:10px;opacity:.8}
-  .meta{background:#f5f3ff;padding:12px 28px;display:flex;gap:32px;border-bottom:1.5px solid #ede9fe;flex-wrap:wrap}
-  .mi label{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block}
-  .mi span{font-size:12px;font-weight:700;color:#3b0764}
-  .body{padding:24px 28px}
-  .st{font-size:10px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #ede9fe;padding-bottom:4px;margin:18px 0 8px}
-  p{font-size:11px;line-height:1.8;color:#334155;text-align:justify;margin-bottom:6px}
-  ul{padding-left:14px}li{font-size:11px;line-height:1.8;color:#334155}
-  .sh{font-size:12px;font-weight:800;color:#6d28d9;margin:18px 0 10px;padding-top:14px;border-top:1.5px solid #ede9fe}
-  .sc{border:1px solid #ede9fe;border-radius:6px;padding:10px;margin-bottom:8px;background:#fafafa}
-  .sh2{font-size:10px;font-weight:700;color:#6d28d9;margin-bottom:5px}
-  .ai{font-size:10px;line-height:1.7;color:#334155;background:#f0fdf4;border-radius:5px;padding:7px;border:1px solid #bbf7d0;margin-top:5px}
-  .ftr{border-top:2px solid #f97316;padding:14px 28px;display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px}
-  .sl{width:44%;border-top:1px solid #cbd5e1;padding-top:5px}
-  .sn{font-size:10px;font-weight:700}.sc2{font-size:9px;color:#64748b}.pg{font-size:9px;color:#94a3b8;text-align:center;margin-top:6px}
-  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
-  <div class="hdr"><div><div class="hdr-brand">CatherFlow</div><div class="hdr-sub">Relatório Clínico de Acompanhamento</div></div><div class="hdr-date">Gerado em ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div></div>
-  <div class="meta">
-    <div class="mi"><label>Paciente</label><span>${d.paciente}</span></div>
-    <div class="mi"><label>Período</label><span>${d.periodo}</span></div>
-    <div class="mi"><label>Total de Sessões</label><span>${d.total_sessoes}</span></div>
-    <div class="mi"><label>Profissional</label><span>${profNome}</span></div>
+  let cfgProf={}; try{cfgProf=JSON.parse(localStorage.getItem('cf_config')||'{}');}catch(e){}
+  let cfgSisP={}; try{cfgSisP=JSON.parse(localStorage.getItem('cf_sistema')||'{}');}catch(e){}
+  const profNome = d.cfgProf?.nome_profissional || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
+  const crpRaw = d.cfgProf?.registro || cfgProf.registro || user.user_metadata?.crp || '';
+  const crp = crpRaw ? crpRaw : '';
+  const nomeClinica = d.cfgProf?.nome_clinica || cfgProf.nome_clinica || 'CatherFlow';
+  const tipoProfissional = d.cfgProf?.tipo_profissional || cfgProf.tipo_profissional || '';
+  const endereco = d.cfgProf?.endereco || cfgProf.endereco || '';
+  const whatsapp = d.cfgProf?.whatsapp || cfgProf.whatsapp || '';
+  const valorPadrao = cfgSisP.valor || '';
+  const dataGeracao = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Relatório Clínico — ${d.paciente||'Paciente'}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;font-size:11px;line-height:1.7}
+    /* CABEÇALHO */
+    .hdr{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;padding:20px 32px;display:flex;justify-content:space-between;align-items:flex-start}
+    .hdr-left .brand{font-size:20px;font-weight:800;letter-spacing:-.5px}
+    .hdr-left .sub{font-size:10px;opacity:.75;margin-top:3px;letter-spacing:.5px;text-transform:uppercase}
+    .hdr-right{text-align:right;font-size:10px;opacity:.8}
+    /* FAIXA DE IDENTIFICAÇÃO */
+    .ident{background:#f5f3ff;border-bottom:2px solid #ede9fe;padding:14px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px}
+    .ident-item label{font-size:8px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:2px}
+    .ident-item span{font-size:12px;font-weight:700;color:#1e293b}
+    /* BODY */
+    .body{padding:20px 32px}
+    /* SEÇÕES CLÍNICAS */
+    .sec-titulo{font-size:9px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.8px;padding-bottom:5px;border-bottom:2px solid #ede9fe;margin:18px 0 8px}
+    .sec-conteudo{font-size:11px;line-height:1.8;color:#334155;text-align:justify;padding:10px 14px;background:#fafafa;border-left:3px solid #c4b5fd;border-radius:0 6px 6px 0;margin-bottom:4px}
+    .sec-lista{padding-left:16px;margin:0}
+    .sec-lista li{font-size:11px;line-height:1.9;color:#334155}
+    /* HISTÓRICO */
+    .hist-titulo{font-size:13px;font-weight:800;color:#1e293b;margin:24px 0 12px;padding-top:18px;border-top:2px solid #ede9fe;display:flex;align-items:center;gap:8px}
+    .hist-badge{background:#ede9fe;color:#6d28d9;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px}
+    .hist-card{border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px;background:#fff;page-break-inside:avoid}
+    .hist-card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .hist-card-num{font-size:11px;font-weight:800;color:#4c1d95}
+    .hist-card-pgto-pago{background:#dcfce7;color:#166534;font-size:8px;font-weight:700;padding:2px 8px;border-radius:10px}
+    .hist-card-pgto-pend{background:#fef9c3;color:#854d0e;font-size:8px;font-weight:700;padding:2px 8px;border-radius:10px}
+    .hist-campo label{font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;margin-top:6px}
+    .hist-campo p{font-size:10px;line-height:1.7;color:#334155}
+    .resumo-ia{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:5px;padding:8px 10px;margin-top:8px;font-size:10px;line-height:1.7;color:#166534}
+    .resumo-ia strong{color:#15803d}
+    /* RODAPÉ */
+    .ftr{border-top:3px solid #7c3aed;padding:16px 32px;display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;background:#fafafa}
+    .assinatura{min-width:200px}
+    .assinatura .linha{border-top:1px solid #94a3b8;padding-top:5px;margin-top:32px}
+    .assinatura .nome{font-size:11px;font-weight:700;color:#1e293b}
+    .assinatura .registro{font-size:10px;color:#64748b;margin-top:2px}
+    .rodape-info{text-align:right;font-size:9px;color:#94a3b8}
+    @media print{
+      body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .hist-card{page-break-inside:avoid}
+    }
+  </style></head><body>
+
+  <!-- CABEÇALHO -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="brand">${nomeClinica}</div>
+      <div class="sub">Relatório Clínico de Acompanhamento Terapêutico</div>
+      ${tipoProfissional?`<div style="font-size:10px;opacity:.7;margin-top:4px">${tipoProfissional}</div>`:''}
+    </div>
+    <div class="hdr-right">
+      <div>Gerado em ${dataGeracao}</div>
+      ${endereco?`<div style="margin-top:4px">${endereco}</div>`:''}
+      ${whatsapp?`<div>WhatsApp: ${whatsapp}</div>`:''}
+    </div>
   </div>
+
+  <!-- IDENTIFICAÇÃO -->
+  <div class="ident">
+    <div class="ident-item"><label>Paciente</label><span>${d.paciente||'—'}</span></div>
+    <div class="ident-item"><label>Período Analisado</label><span>${d.periodo||window._relAtual?.periodoLabel||'—'}</span></div>
+    <div class="ident-item"><label>Total de Sessões</label><span>${d.total_sessoes||hist.length||'—'}</span></div>
+    <div class="ident-item"><label>Profissional Responsável</label><span>${profNome}</span></div>
+    ${crp?`<div class="ident-item"><label>Registro Profissional</label><span>${crp}</span></div>`:''}
+    ${valorPadrao?`<div class="ident-item"><label>Valor por Sessão</label><span>R$ ${parseFloat(valorPadrao).toFixed(2)}</span></div>`:''}
+  </div>
+
+  <!-- CORPO -->
   <div class="body">
-    <div class="st">1. Visão Geral do Percurso Terapêutico</div><p>${s.s1_visao_geral||'—'}</p>
-    <div class="st">2. O que Melhorou</div><p>${s.s2_melhorou||'—'}</p>
-    <div class="st">3. O que Ainda Persiste</div><p>${s.s3_persiste||'—'}</p>
-    <div class="st">4. O que Foi Solucionado</div><p>${s.s4_solucionado||'—'}</p>
-    ${s.s5_intervencoes?.length?`<div class="st">5. Intervenções Utilizadas</div><ul>${s.s5_intervencoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
-    ${s.s6_recomendacoes?.length?`<div class="st">6. Recomendações</div><ul>${s.s6_recomendacoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
-    ${hist.length?`<div class="sh">Histórico de Sessões</div>${hist.map(h=>`
-      <div class="sc"><div class="sh2">Sessão ${h.sessao} — ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
-      ${h.resumo_ia?`<div class="ai">🤖 Resumo IA: ${h.resumo_ia}</div>`:''}</div>`).join('')}`:''}
+
+    <!-- SEÇÕES CLÍNICAS -->
+    ${s.s1_visao_geral?`<div class="sec-titulo">1. Visão Geral do Percurso Terapêutico</div><div class="sec-conteudo">${s.s1_visao_geral}</div>`:''}
+    ${s.s2_melhorou?`<div class="sec-titulo">2. Aspectos que Evoluíram Positivamente</div><div class="sec-conteudo">${s.s2_melhorou}</div>`:''}
+    ${s.s3_persiste?`<div class="sec-titulo">3. Aspectos que Ainda Demandam Atenção</div><div class="sec-conteudo">${s.s3_persiste}</div>`:''}
+    ${s.s4_solucionado?`<div class="sec-titulo">4. Questões Trabalhadas e Superadas</div><div class="sec-conteudo">${s.s4_solucionado}</div>`:''}
+    ${s.s5_intervencoes?.length?`<div class="sec-titulo">5. Intervenções e Técnicas Utilizadas</div><ul class="sec-lista">${s.s5_intervencoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
+    ${s.s6_recomendacoes?.length?`<div class="sec-titulo">6. Recomendações e Encaminhamentos</div><ul class="sec-lista">${s.s6_recomendacoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
+
+    <!-- HISTÓRICO DETALHADO -->
+    ${hist.length?`
+      <div class="hist-titulo">
+        Histórico Detalhado de Sessões
+        <span class="hist-badge">${hist.length} ${hist.length===1?'sessão':'sessões'}</span>
+      </div>
+      ${hist.map((h,i)=>`
+        <div class="hist-card">
+          <div class="hist-card-hdr">
+            <div class="hist-card-num">Sessão ${h.numero_sessao||h.sessao||i+1} &nbsp;·&nbsp; ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}):'—'}${h.horario?` &nbsp;·&nbsp; ${h.horario.substring(0,5)}`:''}</div>
+            ${h.status_pagamento?`<span class="${h.status_pagamento==='pago'?'hist-card-pgto-pago':'hist-card-pgto-pend'}">${h.status_pagamento==='pago'?'✓ Pago':'⏳ Pendente'}</span>`:''}
+          </div>
+          ${h.queixas_principais?`<div class="hist-campo"><label>Queixas Apresentadas</label><p>${h.queixas_principais}</p></div>`:''}
+          ${h.intervencoes?`<div class="hist-campo"><label>Intervenções Realizadas</label><p>${h.intervencoes}</p></div>`:''}
+          ${h.evolucao?`<div class="hist-campo"><label>Evolução Observada</label><p>${h.evolucao}</p></div>`:''}
+          ${h.pontos_atencao?`<div class="hist-campo"><label>Pontos de Atenção</label><p>${h.pontos_atencao}</p></div>`:''}
+          ${h.proximos_passos?`<div class="hist-campo"><label>Próximos Passos</label><p>${h.proximos_passos}</p></div>`:''}
+          ${h.resumo_ia?`<div class="resumo-ia"><strong>🤖 Análise IA:</strong> ${h.resumo_ia}</div>`:''}
+        </div>`).join('')}`:''}
+
   </div>
+
+  <!-- RODAPÉ / ASSINATURA -->
   <div class="ftr">
-    <div class="sl"><div class="sn">${profNome}</div><div class="sc2">${crp}</div></div>
-    <div class="sl" style="text-align:right"><div class="sn">Assinatura</div><div class="sc2">_____________________</div></div>
+    <div class="assinatura">
+      <div class="linha">
+        <div class="nome">${profNome}</div>
+        ${crp?`<div class="registro">${crp}</div>`:''}
+        ${tipoProfissional?`<div class="registro">${tipoProfissional}</div>`:''}
+      </div>
+    </div>
+    <div class="rodape-info">
+      <div>Documento gerado pelo CatherFlow</div>
+      <div style="margin-top:2px">${dataGeracao}</div>
+      <div style="margin-top:2px;font-size:8px;color:#cbd5e1">Este relatório é confidencial e de uso clínico exclusivo</div>
+    </div>
   </div>
-  <script>window.onload=()=>{window.print();}<\/script></body></html>`;
+
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
   const w=window.open('','_blank'); w.document.write(html); w.document.close();
 }
 
@@ -2635,56 +2883,69 @@ function ajustarCor(hex,delta){
 }
 
 async function salvarConfig(){
-  const body={
-    id: user.id,                          // chave primária = auth.uid()
-    nome_completo: document.getElementById('cfg-nome')?.value.trim(),
-    registro_profissional: document.getElementById('cfg-registro')?.value.trim(),
-    avatar_url: localStorage.getItem('cf_foto')||undefined
-  };
-  // Remove campos undefined
-  Object.keys(body).forEach(k=>body[k]===undefined && delete body[k]);
-  // Salva localmente
-  const cfgLocal={
-    nome_clinica: document.getElementById('cfg-clinica')?.value.trim(),
-    nome_profissional: body.nome_completo,
-    registro: body.registro_profissional,
-    tipo_profissional: document.getElementById('cfg-tipo')?.value,
-    bio: document.getElementById('cfg-bio')?.value.trim(),
-    endereco: document.getElementById('cfg-endereco')?.value.trim(),
-    whatsapp: document.getElementById('cfg-whatsapp')?.value.trim(),
-    instagram: document.getElementById('cfg-instagram')?.value.trim(),
-    site: document.getElementById('cfg-site')?.value.trim(),
-  };
+  const nome = document.getElementById('cfg-nome')?.value.trim()||'';
+  const registro = document.getElementById('cfg-registro')?.value.trim()||'';
+  const clinica = document.getElementById('cfg-clinica')?.value.trim()||'';
+  const tipo = document.getElementById('cfg-tipo')?.value||'';
+  const bio = document.getElementById('cfg-bio')?.value.trim()||'';
+  const endereco = document.getElementById('cfg-endereco')?.value.trim()||'';
+  const whatsapp = document.getElementById('cfg-whatsapp')?.value.trim()||'';
+  const instagram = document.getElementById('cfg-instagram')?.value.trim()||'';
+  const site = document.getElementById('cfg-site')?.value.trim()||'';
+  const foto = localStorage.getItem('cf_foto')||'';
+
+  // Salva tudo no localStorage imediatamente
+  const cfgLocal = { nome_clinica:clinica, nome_profissional:nome, registro, tipo_profissional:tipo, bio, endereco, whatsapp, instagram, site };
   localStorage.setItem('cf_config', JSON.stringify(cfgLocal));
+
+  // Monta body para Supabase — usa id = auth.uid() como PK
+  const body = { id:user.id, nome_completo:nome, registro_profissional:registro, nome_clinica:clinica, tipo_profissional:tipo, bio, endereco, whatsapp, instagram, site };
+  if(foto) body.avatar_url = foto;
+
   try{
-    const r=await fetch(`${SB}/rest/v1/t2_usuarios`,{
+    // UPSERT via POST com Prefer: resolution=merge-duplicates
+    const r = await fetch(`${SB}/rest/v1/t2_usuarios`, {
       method:'POST',
       headers:{
-        'apikey':SK,'Authorization':`Bearer ${token}`,
+        'apikey':SK, 'Authorization':`Bearer ${token}`,
         'Content-Type':'application/json',
-        'Prefer':'resolution=merge-duplicates'
+        'Prefer':'resolution=merge-duplicates,return=representation'
       },
-      body:JSON.stringify(body)
+      body: JSON.stringify(body)
     });
-    toast(r.ok?'✅ Identidade salva!':'✅ Salvo localmente!');
-  }catch(e){
+    if(!r.ok){
+      const err = await r.json().catch(()=>({}));
+      console.warn('Config save warning:', err);
+      toast('✅ Salvo localmente! (banco: '+( err.message||err.details||r.status)+')','orange');
+    } else {
+      toast('✅ Identidade salva com sucesso!');
+    }
+  } catch(e){
+    console.warn('Config save offline:', e);
     toast('✅ Salvo localmente!');
   }
   atualizarPreview();
+  // Atualiza sidebar
+  document.getElementById('user-name').textContent = nome || user.user_metadata?.nome || user.email.split('@')[0];
+  if(registro) document.getElementById('user-role').textContent = registro;
 }
 
 function salvarVisual(){
+  // Visual já é aplicado em tempo real pelas funções setTema/setCorDestaque
+  // Só precisa confirmar para o usuário
   toast('✅ Visual salvo!');
 }
 
 function salvarSistema(){
-  const cfg={
-    valor:document.getElementById('cfg-valor')?.value,
-    duracao:document.getElementById('cfg-duracao')?.value,
-    notif:document.getElementById('cfg-notif')?.value,
-  };
-  localStorage.setItem('cf_sistema',JSON.stringify(cfg));
-  toast('✅ Sistema salvo!');
+  const valor = document.getElementById('cfg-valor')?.value||'';
+  const duracao = document.getElementById('cfg-duracao')?.value||'';
+  const notif = document.getElementById('cfg-notif')?.value||'';
+  const cfg = { valor, duracao, notif };
+  localStorage.setItem('cf_sistema', JSON.stringify(cfg));
+  // Atualiza valor padrão no modal de sessão se existir
+  const sessValor = document.getElementById('sess-valor');
+  if(sessValor && valor && !sessValor.value) sessValor.value = valor;
+  toast('✅ Configurações do sistema salvas!');
 }
 
 function carregarConfiguracoesSalvas(){
@@ -2726,21 +2987,29 @@ function carregarConfiguracoesSalvas(){
 async function carregarFotoDoSupabase(){
   try{
     // Busca URL da foto salva no perfil do usuário
-    const r=await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,registro_profissional,avatar_url`,{
+    const r=await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,registro_profissional,avatar_url,nome_clinica,tipo_profissional,bio,endereco,whatsapp,instagram,site`,{
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
     });
+    if(!r.ok){ console.warn('t2_usuarios fetch failed:', r.status); return; }
     const data=await r.json();
     if(Array.isArray(data)&&data[0]){
       const u=data[0];
       // Foto
-      if(u.avatar_url){
-        localStorage.setItem('cf_foto',u.avatar_url);
-        aplicarFoto(u.avatar_url);
-      }
-      // Preenche campos de config com dados do banco
-      const setEl=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+      if(u.avatar_url){ localStorage.setItem('cf_foto',u.avatar_url); aplicarFoto(u.avatar_url); }
+      // Preenche campos de config com dados do banco (sobrescreve localStorage)
+      const setEl=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&v!=='')el.value=v;};
       setEl('cfg-nome', u.nome_completo);
       setEl('cfg-registro', u.registro_profissional);
+      setEl('cfg-clinica', u.nome_clinica);
+      setEl('cfg-tipo', u.tipo_profissional);
+      setEl('cfg-bio', u.bio);
+      setEl('cfg-endereco', u.endereco);
+      setEl('cfg-whatsapp', u.whatsapp);
+      setEl('cfg-instagram', u.instagram);
+      setEl('cfg-site', u.site);
+      // Salva no localStorage também
+      const cfgLocal={nome_clinica:u.nome_clinica,nome_profissional:u.nome_completo,registro:u.registro_profissional,tipo_profissional:u.tipo_profissional,bio:u.bio,endereco:u.endereco,whatsapp:u.whatsapp,instagram:u.instagram,site:u.site};
+      localStorage.setItem('cf_config',JSON.stringify(cfgLocal));
       atualizarPreview();
     }
   }catch(e){console.error('foto supabase',e)}
