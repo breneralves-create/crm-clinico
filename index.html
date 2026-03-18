@@ -541,7 +541,7 @@ body.light thead th{background:var(--bg3)}
       <div class="page-header">
         <h1 id="greeting">Bom dia 👋</h1>
         <div class="hactions">
-          <button class="btn-primary" onclick="abrirModalSessao()">+ Nova Sessão</button>
+          <button class="btn-primary" onclick="abrirModalAgenda()">+ Nova Consulta</button>
         </div>
       </div>
       <div class="kpi-grid">
@@ -589,7 +589,6 @@ body.light thead th{background:var(--bg3)}
         </div>
         <div class="hactions">
           <button class="btn-primary" onclick="abrirEditarPaciente()">✏️ Editar</button>
-          <button class="btn-primary" onclick="abrirModalSessaoDetalhe()">+ Nova Sessão</button>
         </div>
       </div>
 
@@ -621,9 +620,7 @@ body.light thead th{background:var(--bg3)}
     <div id="page-sessoes" class="page">
       <div class="page-header">
         <h1>Sessões Realizadas</h1>
-        <div class="hactions">
-          <button class="btn-primary" onclick="abrirModalSessao()">+ Nova Sessão</button>
-        </div>
+        <div class="hactions"></div>
       </div>
       <div class="card">
         <div class="table-wrap"><div id="lista-sessoes"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div></div>
@@ -1444,7 +1441,7 @@ function renderPacientes(){
         <td>${p.data_nascimento?fmtDate(p.data_nascimento):'—'}</td>
         <td><span class="badge badge-purple">${total}</span></td>
         <td style="display:flex;gap:6px" onclick="event.stopPropagation()">
-          <button class="btn-sm" onclick="abrirModalSessaoParaPaciente(${p.id})">+ Sessão</button>
+          <button class="btn-sm" onclick="avisarSessaoViaAgenda()" title="Sessão gerada pela Agenda">📅 Agendar</button>
           <button class="btn-danger" onclick="excluirPaciente(${p.id},'${p.nome.replace(/'/g,"\\'")}')">Excluir</button>
         </td>
       </tr>`;
@@ -1661,7 +1658,10 @@ function abrirDetalheAgendamento(id){
 
   document.getElementById('ag-det-body').innerHTML = `
     ${isHoje?`<div style="background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--p4);text-align:center">⏰ Consulta de HOJE — ${agendamentoAtual.hora?.substring(0,5)}</div>`:''}
-    ${sessaoHoje?`<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:#4ade80;text-align:center">✅ Sessão já registrada hoje</div>`:''}
+    ${sessaoHoje?`<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#4ade80;text-align:center">✅ Sessão já registrada</div>`:''}
+    ${!sessaoHoje&&(agendamentoAtual.status||'agendado')==='agendado'?`<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:#fbbf24;text-align:center">⚠️ Confirme o agendamento para liberar o botão Gerar Sessão</div>`:''}
+    ${(agendamentoAtual.status||'')==='cancelado'?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:#f87171;text-align:center">🚫 Cancelado — não é possível gerar sessão</div>`:''}
+    ${(agendamentoAtual.status||'')==='realizado'?`<div style="background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--text3);text-align:center">✅ Atendimento já realizado</div>`:''}
     
     <!-- Dados do paciente antes do atendimento -->
     <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
@@ -1701,20 +1701,28 @@ function abrirDetalheAgendamento(id){
   const btnCancelar = document.getElementById('btn-ag-cancelar');
   const btnIniciar = document.getElementById('btn-ag-iniciar');
 
-  // Botão principal: INICIAR ATENDIMENTO (só aparece se hoje ou passado e sem sessão registrada)
+  // REGRA: botão Gerar Sessão só aparece se status = confirmado e sem sessão já gerada
+  const statusAg = agendamentoAtual.status || 'agendado';
   if(btnIniciar){
-    if(!sessaoHoje && !isFuturo){
+    if(sessaoHoje){
+      // Sessão já existe — bloqueia duplicação
       btnIniciar.style.display='flex';
-      btnIniciar.textContent = isHoje ? '🟢 Iniciar Atendimento' : '📋 Registrar Sessão Retroativa';
-    } else if(sessaoHoje){
+      btnIniciar.style.background='linear-gradient(135deg,#374151,#1f2937)';
+      btnIniciar.textContent='✅ Sessão já registrada';
+    } else if(statusAg === 'confirmado'){
+      // ÚNICO caso permitido para gerar sessão
       btnIniciar.style.display='flex';
-      btnIniciar.textContent = '📋 Ver Sessão Registrada';
+      btnIniciar.style.background='linear-gradient(135deg,#16a34a,#15803d)';
+      btnIniciar.textContent='🟢 Gerar Sessão';
     } else {
+      // agendado / cancelado / realizado → botão oculto
       btnIniciar.style.display='none';
     }
   }
-  if(btnConfirmar) btnConfirmar.style.display = agendamentoAtual.status!=='confirmado'&&isFuturo?'flex':'none';
-  if(btnCancelar) btnCancelar.style.display = agendamentoAtual.status!=='cancelado'?'flex':'none';
+  // Confirmar: só se status = agendado
+  if(btnConfirmar) btnConfirmar.style.display = (statusAg==='agendado') ? 'flex' : 'none';
+  // Cancelar: só se não cancelado e não realizado
+  if(btnCancelar) btnCancelar.style.display = (statusAg!=='cancelado'&&statusAg!=='realizado') ? 'flex' : 'none';
 
   document.getElementById('modal-ag-detalhe').classList.add('show');
 }
@@ -1762,23 +1770,35 @@ async function excluirAgendamentoDetalhe(){
 
 function iniciarAtendimento(){
   if(!agendamentoAtual) return;
-  const sessaoHoje = sessoes.find(s=>s.paciente_id==agendamentoAtual.paciente_id&&s.data_sessao===agendamentoAtual.data);
-  fecharModal('modal-ag-detalhe');
-  if(sessaoHoje){
-    // Já tem sessão — abre o detalhe
-    abrirDetalheSession(sessaoHoje.id);
+
+  // Sessão já vinculada → só visualiza, bloqueia duplicação
+  const sessaoVinculada = sessoes.find(s=>
+    s.paciente_id==agendamentoAtual.paciente_id &&
+    s.data_sessao===agendamentoAtual.data
+  );
+  if(sessaoVinculada){
+    fecharModal('modal-ag-detalhe');
+    abrirDetalheSession(sessaoVinculada.id);
     return;
   }
-  // Abre modal de sessão pré-preenchido
-  abrirModalSessao();
+
+  // Dupla segurança: bloqueia se não for confirmado
+  if((agendamentoAtual.status||'agendado') !== 'confirmado'){
+    toast('Para gerar uma sessão, o agendamento precisa estar confirmado.','orange');
+    return;
+  }
+
+  // ✅ Fluxo correto: agendamento confirmado, sem sessão — abre modal pré-preenchido
+  fecharModal('modal-ag-detalhe');
+  abrirModalSessao(true); // true = origem agendamento confirmado
   document.getElementById('sess-pac').value = agendamentoAtual.paciente_id;
   document.getElementById('sess-data').value = agendamentoAtual.data;
   document.getElementById('sess-horario').value = agendamentoAtual.hora?.substring(0,5)||'09:00';
-  
+  document.getElementById('sess-tipo').value = agendamentoAtual.tipo||'presencial';
   // Número sequencial automático
   const totalSessoes = sessoes.filter(s=>s.paciente_id==agendamentoAtual.paciente_id).length;
   document.getElementById('sess-numero').value = totalSessoes + 1;
-  // Marca o agendamento como em andamento
+  // Guarda vínculo para marcar agendamento como realizado ao salvar
   window._agendamentoOrigemId = agendamentoAtual.id;
 }
 
@@ -1858,7 +1878,12 @@ function abrirModalPaciente(){
   document.getElementById('modal-paciente').classList.add('show');
 }
 
-function abrirModalSessao(){
+function abrirModalSessao(_fromAgendamento=false){
+  // REGRA: sessão só nasce de agendamento confirmado
+  if(!_fromAgendamento){
+    toast('Para registrar uma sessão, primeiro é necessário ter um agendamento confirmado.','orange');
+    return;
+  }
   if(!pacientes.length){
     toast('⚠️ Cadastre um paciente antes de registrar uma sessão','orange');
     return;
@@ -1875,9 +1900,13 @@ function abrirModalSessao(){
   document.getElementById('modal-sessao').classList.add('show');
 }
 
+function avisarSessaoViaAgenda(){
+  toast('Para registrar uma sessão, primeiro é necessário ter um agendamento confirmado.','orange');
+}
+
 function abrirModalSessaoParaPaciente(pacId){
-  abrirModalSessao();
-  document.getElementById('sess-pac').value=pacId;
+  // Bloqueado: sessão só pode vir de agendamento confirmado
+  toast('Para registrar uma sessão, primeiro é necessário ter um agendamento confirmado.','orange');
 }
 
 function abrirModalAgenda(){
@@ -2113,7 +2142,7 @@ function voltarParaPacientes(){
 }
 
 function abrirModalSessaoDetalhe(){
-  if(pacienteAtual) abrirModalSessaoParaPaciente(pacienteAtual.id);
+  toast('Para registrar uma sessão, primeiro é necessário ter um agendamento confirmado.','orange');
 }
 
 function abrirEditarPaciente(){
