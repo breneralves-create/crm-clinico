@@ -2517,12 +2517,12 @@ async function confirmarGerarRelatorio(){
       if(rProf.ok){ const dp=await rProf.json(); if(dp[0]) profDB=dp[0]; }
     }catch(e){}
 
+    const cfgSisObj = {};
+    try{ Object.assign(cfgSisObj, JSON.parse(localStorage.getItem('cf_sistema')||'{}')); }catch(e){}
     const nomeProfissional = profDB.nome_completo || profDB.nome_profissional || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
     const registroProfissional = profDB.registro || cfgProf.registro || user.user_metadata?.crp || '';
     const nomeClinica = profDB.nome_clinica || cfgProf.nome_clinica || 'CatherFlow';
     const valorSessaoDB = profDB.valor_sessao_padrao || cfgSisObj.valor || '';
-    const cfgSisObj = {};
-    try{ Object.assign(cfgSisObj, JSON.parse(localStorage.getItem('cf_sistema')||'{}')); }catch(e){}
 
     const d=await whFetch(WH.relatorio,{
       user_id:user.id,
