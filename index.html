@@ -4,176 +4,457 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CatherFlow — Gestão Clínica Inteligente</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --p1:#7c3aed;--p2:#6d28d9;--p3:#a855f7;--p4:#c4b5fd;
-  --bg:#0f0a1e;--bg2:#1a0f3a;--bg3:#2d1b6e;
-  --text:#fff;--text2:rgba(255,255,255,.85);--text3:rgba(255,255,255,.6);
-  --border:rgba(255,255,255,.1);--card:rgba(255,255,255,.04);
-  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;
-}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-.bg-orb{position:fixed;inset:0;z-index:0;pointer-events:none}
-.orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.2}
-.orb1{width:600px;height:600px;background:var(--p1);top:-200px;left:-200px}
-.orb2{width:400px;height:400px;background:var(--p2);bottom:-100px;right:-100px}
+  /* Paleta clínica premium — azul-ardósia + esmeralda + âmbar */
+  --p1:#2563EB;--p2:#1d4ed8;--p3:#60a5fa;--p4:#bfdbfe;
+  --accent:#10b981;--accent2:#059669;--accent3:#6ee7b7;
+  --warn:#f59e0b;--danger:#ef4444;--danger2:#dc2626;
 
-/* LOGIN */
+  /* Backgrounds com profundidade real */
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2330;--bg4:#21262d;
+  --text:#e6edf3;--text2:#c9d1d9;--text3:#8b949e;--text4:#484f58;
+
+  /* Borders nítidos */
+  --border:#30363d;--border2:#21262d;--border-accent:rgba(37,99,235,.4);
+
+  /* Cards com presença */
+  --card:#161b22;--card2:#1c2330;--card-hover:#1f2937;
+
+  /* Sombras */
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  --shadow-lg:0 4px 12px rgba(0,0,0,.5),0 20px 40px rgba(0,0,0,.4);
+  --glow-blue:0 0 20px rgba(37,99,235,.3);
+  --glow-green:0 0 20px rgba(16,185,129,.25);
+
+  --radius:12px;--radius-lg:16px;--radius-xl:20px;
+}
+
+/* ── FONT & BASE ── */
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+code,pre,.mono{font-family:'JetBrains Mono',monospace}
+
+/* Fundo atmosférico com gradiente visível — como na screenshot */
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 50% at -5% 0%, rgba(37,99,235,.18) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 105% 100%, rgba(16,185,129,.12) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(37,99,235,.04) 0%, transparent 70%);
+}
+
+/* Gradiente no topo da sidebar */
+.sidebar::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:180px;
+  background:linear-gradient(180deg,rgba(37,99,235,.12) 0%,transparent 100%);
+  pointer-events:none;border-radius:0;z-index:0;
+}
+.sidebar>*{position:relative;z-index:1}
+
+/* KPI card com gradiente azul/esmeralda por posição */
+.kpi-card:nth-child(1){background:linear-gradient(135deg,rgba(37,99,235,.12) 0%,var(--card) 60%);border-color:rgba(37,99,235,.25)}
+.kpi-card:nth-child(2){background:linear-gradient(135deg,rgba(16,185,129,.1) 0%,var(--card) 60%);border-color:rgba(16,185,129,.2)}
+.kpi-card:nth-child(3){background:linear-gradient(135deg,rgba(245,158,11,.1) 0%,var(--card) 60%);border-color:rgba(245,158,11,.2)}
+.kpi-card:nth-child(4){background:linear-gradient(135deg,rgba(96,165,250,.1) 0%,var(--card) 60%);border-color:rgba(96,165,250,.2)}
+
+/* Card de aniversariantes */
+.aniv-item{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 14px;border-radius:10px;
+  background:var(--bg3);border:1px solid var(--border);
+  margin-bottom:8px;transition:all .18s;
+}
+.aniv-item:hover{background:var(--bg4);border-color:var(--border-accent)}
+.aniv-item:last-child{margin-bottom:0}
+.aniv-avatar{
+  width:40px;height:40px;border-radius:50%;
+  background:linear-gradient(135deg,var(--p1),var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:15px;color:#fff;flex-shrink:0;
+}
+.aniv-info{flex:1;min-width:0}
+.aniv-nome{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aniv-data{font-size:11px;color:var(--text3);margin-top:1px}
+.aniv-badge-hoje{background:linear-gradient(135deg,var(--p1),var(--accent));color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.4)}
+.aniv-badge-amanha{background:rgba(16,185,129,.15);color:var(--accent);border:1px solid rgba(16,185,129,.3);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.aniv-badge-semana{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.25);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.aniv-wpp{
+  display:flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:10px;
+  background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.25);
+  color:#25d366;font-size:17px;cursor:pointer;transition:all .18s;
+  text-decoration:none;flex-shrink:0;
+}
+.aniv-wpp:hover{background:rgba(37,211,102,.22);transform:scale(1.08)}
+
+/* ── LOGIN ── */
 #login-page{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
-.login-box{max-width:420px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:40px;backdrop-filter:blur(30px)}
+.login-box{max-width:420px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px;box-shadow:var(--shadow-lg)}
 .login-logo{text-align:center;margin-bottom:32px}
-.login-logo h1{font-size:24px;font-weight:800;margin-bottom:8px}
-.login-logo p{font-size:14px;color:var(--text3)}
+.login-logo h1{font-size:24px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,var(--text),var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.login-logo p{font-size:13px;color:var(--text3)}
+
+/* ── FIELDS ── */
 .field{margin-bottom:16px}
-.field label{display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.field input,.field select,.field textarea{width:100%;padding:13px 16px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:12px;color:var(--text);font:14px 'Plus Jakarta Sans';outline:none;transition:.2s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--p1);background:rgba(124,58,237,.08);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.field input,.field select,.field textarea{
+  width:100%;padding:11px 14px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);
+  font:14px 'Sora',sans-serif;outline:none;transition:all .2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--p1);background:var(--bg4);
+  box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+.field input::placeholder,.field textarea::placeholder{color:var(--text4)}
 .field textarea{resize:vertical;min-height:80px}
-.field select{cursor:pointer}
-.btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;font:700 14px 'Plus Jakarta Sans';cursor:pointer;transition:.2s;box-shadow:0 8px 32px rgba(124,58,237,.4)}
-.btn:hover{transform:translateY(-1px);box-shadow:0 12px 40px rgba(124,58,237,.6)}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.error{margin-top:12px;padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:var(--red);font-size:13px;text-align:center;display:none}
+.field select{cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;
+}
+.field select option{background:var(--bg3);color:var(--text)}
+
+/* ── BOTÕES ── */
+.btn{
+  width:100%;padding:13px;border:none;border-radius:var(--radius);
+  background:var(--p1);color:#fff;
+  font:700 14px 'Sora',sans-serif;cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 16px rgba(37,99,235,.35);
+  letter-spacing:.3px;
+}
+.btn:hover{background:var(--p2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(37,99,235,.5)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.error{margin-top:12px;padding:11px 14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;color:#f87171;font-size:13px;text-align:center;display:none}
 .error.show{display:block}
 
-/* APP LAYOUT */
+/* ── APP LAYOUT ── */
 #app{display:none;position:relative;z-index:1}
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);backdrop-filter:blur(20px);padding:24px 16px;display:flex;flex-direction:column;z-index:10}
-.logo{display:flex;align-items:center;gap:12px;margin-bottom:36px;padding:0 8px}
-.logo-icon{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0}
-.logo-text strong{display:block;font-size:16px;font-weight:800}
-.logo-text span{font-size:11px;color:var(--text3);font-weight:600}
-.nav-section{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin:20px 0 6px;padding:0 8px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:.2s;font-size:14px;font-weight:600;color:var(--text2);margin-bottom:2px}
-.nav-item:hover{background:rgba(255,255,255,.07)}
-.nav-item.active{background:rgba(124,58,237,.25);color:var(--p4);border:1px solid rgba(124,58,237,.3)}
-.nav-item svg{width:17px;height:17px;flex-shrink:0}
-.nav-badge{margin-left:auto;background:rgba(124,58,237,.4);color:var(--p4);font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
-.user-card{margin-top:auto;padding:12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.2s}
-.user-card:hover{background:rgba(255,255,255,.08)}
-.user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+
+/* ── SIDEBAR PREMIUM ── */
+.sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:252px;
+  background:var(--card);
+  border-right:1px solid var(--border);
+  padding:20px 12px;display:flex;flex-direction:column;z-index:10;
+}
+.sidebar::after{
+  content:'';position:absolute;top:0;right:-1px;width:1px;height:100%;
+  background:linear-gradient(180deg,transparent,rgba(37,99,235,.3) 40%,rgba(16,185,129,.2) 80%,transparent);
+}
+
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;padding:8px 10px;border-radius:var(--radius);background:var(--bg2);border:1px solid var(--border)}
+.logo-icon{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--p1),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;
+  box-shadow:0 2px 8px rgba(37,99,235,.4);
+}
+.logo-text strong{display:block;font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.logo-text span{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.3px}
+
+/* Divisor de seção na sidebar */
+.nav-section{
+  font-size:9px;font-weight:700;letter-spacing:2.5px;
+  color:var(--text4);text-transform:uppercase;
+  margin:16px 0 6px;padding:0 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.nav-section::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:var(--radius);
+  cursor:pointer;transition:all .18s;
+  font-size:13px;font-weight:600;color:var(--text3);
+  margin-bottom:1px;position:relative;
+}
+.nav-item:hover{background:var(--bg3);color:var(--text2)}
+.nav-item.active{
+  background:rgba(37,99,235,.12);color:var(--p3);
+  border:1px solid rgba(37,99,235,.25);
+  box-shadow:inset 3px 0 0 var(--p1);
+}
+.nav-item.active svg{color:var(--p1)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;transition:color .18s}
+.nav-badge{
+  margin-left:auto;background:var(--p1);color:#fff;
+  font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;
+  min-width:20px;text-align:center;
+}
+
+/* User card na base */
+.user-card{
+  margin-top:auto;padding:11px 12px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);display:flex;align-items:center;gap:10px;
+  cursor:pointer;transition:all .2s;
+}
+.user-card:hover{background:var(--bg4);border-color:var(--border-accent)}
+.user-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--p1),var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:13px;flex-shrink:0;
+  border:2px solid rgba(37,99,235,.3);
+  overflow:hidden;
+}
 .user-info{flex:1;min-width:0}
-.user-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-role{font-size:11px;color:var(--text3)}
+.user-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.user-role{font-size:10px;color:var(--text3);margin-top:1px}
 
-/* MAIN */
-.main{margin-left:240px;padding:32px 36px;min-height:100vh}
-.page{display:none}.page.active{display:block}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
-.page-header h1{font-size:26px;font-weight:800}
-.hactions{display:flex;gap:10px}
-.btn-primary{padding:10px 18px;background:linear-gradient(135deg,var(--p1),var(--p2));border:none;border-radius:10px;color:#fff;font:700 13px 'Plus Jakarta Sans';cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.4);transition:.2s;white-space:nowrap}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,58,237,.5)}
-.btn-danger{padding:6px 12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:var(--red);font:600 12px 'Plus Jakarta Sans';cursor:pointer;transition:.2s}
-.btn-danger:hover{background:rgba(239,68,68,.25)}
-.btn-sm{padding:6px 12px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:var(--p4);font:600 12px 'Plus Jakarta Sans';cursor:pointer;transition:.2s}
-.btn-sm:hover{background:rgba(124,58,237,.35)}
+/* ── MAIN ── */
+.main{margin-left:252px;padding:28px 32px;min-height:100vh}
+.page{display:none}.page.active{display:block;animation:pageIn .25s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-/* KPI */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
-.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;transition:.2s}
-.kpi-card:hover{border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.06)}
-.kpi-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
-.kpi-value{font-size:30px;font-weight:800;margin-bottom:4px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px}
+.page-header h1 span{color:var(--text3);font-weight:400;font-size:14px;margin-left:10px}
+.hactions{display:flex;gap:8px}
+
+/* ── BOTÕES DE AÇÃO ── */
+.btn-primary{
+  padding:9px 18px;
+  background:var(--p1);border:none;border-radius:var(--radius);
+  color:#fff;font:700 13px 'Sora',sans-serif;cursor:pointer;
+  box-shadow:0 2px 8px rgba(37,99,235,.4);transition:all .18s;white-space:nowrap;
+  letter-spacing:.2px;
+}
+.btn-primary:hover{background:var(--p2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,.5)}
+.btn-primary:active{transform:translateY(0)}
+
+.btn-success{
+  padding:9px 18px;background:var(--accent);border:none;
+  border-radius:var(--radius);color:#fff;
+  font:700 13px 'Sora',sans-serif;cursor:pointer;
+  box-shadow:0 2px 8px rgba(16,185,129,.35);transition:all .18s;
+}
+.btn-success:hover{background:var(--accent2);transform:translateY(-1px)}
+
+.btn-danger{
+  padding:6px 12px;background:rgba(239,68,68,.1);
+  border:1px solid rgba(239,68,68,.25);border-radius:8px;
+  color:#f87171;font:600 12px 'Sora',sans-serif;cursor:pointer;transition:all .18s;
+}
+.btn-danger:hover{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)}
+
+.btn-sm{
+  padding:6px 12px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:8px;
+  color:var(--text2);font:600 12px 'Sora',sans-serif;cursor:pointer;transition:all .18s;
+}
+.btn-sm:hover{background:var(--bg4);border-color:var(--border-accent);color:var(--p3)}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:20px 22px;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--p1),var(--accent));opacity:0;transition:.2s;
+}
+.kpi-card:hover{border-color:rgba(37,99,235,.35);background:var(--card-hover);transform:translateY(-2px);box-shadow:var(--shadow)}
+.kpi-card:hover::before{opacity:1}
+.kpi-label{font-size:10px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1.5px;display:flex;align-items:center;gap:6px}
+.kpi-value{font-size:34px;font-weight:800;margin-bottom:6px;line-height:1;letter-spacing:-1px;color:var(--text)}
 .kpi-sub{font-size:11px;font-weight:600;color:var(--text3)}
-.kpi-sub.up{color:var(--green)}.kpi-sub.down{color:var(--red)}
+.kpi-sub.up{color:var(--accent)}.kpi-sub.down{color:var(--danger)}
 
-/* CARDS */
-.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px}
-.card-title{font-size:15px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+/* ── CARDS ── */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:22px;margin-bottom:16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.3);
+}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.card-title .ct-icon{width:28px;height:28px;border-radius:8px;background:rgba(37,99,235,.12);display:flex;align-items:center;justify-content:center;font-size:14px}
 
-/* TABLE */
-.table-wrap{overflow-x:auto}
+/* ── TABELAS ── */
+.table-wrap{overflow-x:auto;margin:-4px}
 table{width:100%;border-collapse:collapse}
-thead th{text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 12px;border-bottom:1px solid var(--border)}
-tbody td{padding:13px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+thead th{
+  text-align:left;font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:1.2px;
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  background:var(--bg2);
+}
+thead th:first-child{border-radius:8px 0 0 0}
+thead th:last-child{border-radius:0 8px 0 0}
+tbody td{
+  padding:13px 14px;border-bottom:1px solid var(--border2);
+  font-size:13px;vertical-align:middle;color:var(--text2);
+}
 tbody tr:last-child td{border-bottom:none}
-tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody tr:hover{background:var(--card-hover)}
 
-/* MODAL */
-.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:16px}
-.modal.show{display:flex}
-.modal-box{max-width:580px;width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:22px;padding:28px;max-height:92vh;overflow-y:auto}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.modal-title{font-size:18px;font-weight:800}
-.modal-close{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;width:30px;height:30px;border-radius:8px;transition:.2s;display:flex;align-items:center;justify-content:center}
-.modal-close:hover{background:rgba(255,255,255,.1);color:var(--text)}
+/* ── MODAL ── */
+.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.show{display:flex;animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+.modal-box{
+  max-width:580px;width:100%;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--radius-xl);
+  padding:28px;max-height:92vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);
+}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-.2px}
+.modal-close{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text3);
+  width:30px;height:30px;border-radius:8px;cursor:pointer;transition:.18s;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.modal-close:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent)}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-/* BADGES */
-.badge{display:inline-flex;align-items:center;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
-.badge-green{background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
-.badge-orange{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
-.badge-red{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.25)}
-.badge-purple{background:rgba(124,58,237,.25);color:#c4b5fd;border:1px solid rgba(124,58,237,.35)}
-.badge-blue{background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.25)}
-.badge-gray{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1)}
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px;gap:4px}
+.badge-green{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.badge-orange{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
+.badge-red{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.badge-purple{background:rgba(37,99,235,.14);color:var(--p3);border:1px solid rgba(37,99,235,.25)}
+.badge-blue{background:rgba(96,165,250,.1);color:#93c5fd;border:1px solid rgba(96,165,250,.2)}
+.badge-gray{background:rgba(139,148,158,.1);color:var(--text3);border:1px solid rgba(139,148,158,.2)}
+.badge-teal{background:rgba(20,184,166,.12);color:#2dd4bf;border:1px solid rgba(20,184,166,.25)}
 
-/* STATUS ROWS */
-tr.status-pago td:first-child{border-left:3px solid var(--green)}
-tr.status-pendente td:first-child{border-left:3px solid var(--orange)}
-tr.status-cancelado td:first-child{border-left:3px solid var(--red)}
-tr.row-hoje{background:rgba(124,58,237,.07)!important}
+/* ── STATUS ROWS ── */
+tr.status-pago td:first-child{border-left:3px solid var(--accent)}
+tr.status-pendente td:first-child{border-left:3px solid var(--warn)}
+tr.status-cancelado td:first-child{border-left:3px solid var(--danger)}
+tr.row-hoje{background:rgba(37,99,235,.05)!important}
 tr.row-clickable{cursor:pointer;transition:.15s}
-tr.row-clickable:hover{background:rgba(124,58,237,.1)!important}
+tr.row-clickable:hover{background:var(--card-hover)!important}
 
-/* TIPO BADGE */
-.tipo-presencial{color:#a78bfa;font-size:11px;font-weight:600;background:rgba(124,58,237,.15);padding:2px 8px;border-radius:6px}
-.tipo-online{color:#93c5fd;font-size:11px;font-weight:600;background:rgba(59,130,246,.15);padding:2px 8px;border-radius:6px}
+/* ── TIPO BADGE ── */
+.tipo-presencial{color:var(--p3);font-size:11px;font-weight:600;background:rgba(37,99,235,.1);padding:3px 8px;border-radius:6px;border:1px solid rgba(37,99,235,.2)}
+.tipo-online{color:#2dd4bf;font-size:11px;font-weight:600;background:rgba(20,184,166,.1);padding:3px 8px;border-radius:6px;border:1px solid rgba(20,184,166,.2)}
 
-/* UTILS */
-.empty{text-align:center;padding:48px 20px;color:var(--text3)}
-.empty-icon{font-size:44px;margin-bottom:14px;opacity:.4}
+/* ── UTILS ── */
+.empty{text-align:center;padding:52px 20px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.35;display:block}
+.empty p{font-size:13px}
 .loading{text-align:center;padding:48px 20px;color:var(--text3)}
-.spinner{border:3px solid var(--border);border-top-color:var(--p1);border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;margin:0 auto 14px}
+.spinner{border:2px solid var(--border);border-top-color:var(--p1);border-radius:50%;width:32px;height:32px;animation:spin .8s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.ai-hint{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--text3);line-height:1.5}
-.ai-hint strong{color:var(--p4)}
 
-/* CONFIG TABS */
-.cfg-tab{padding:8px 16px;border:none;border-radius:10px;font:600 13px 'Plus Jakarta Sans';cursor:pointer;background:transparent;color:var(--text3);transition:.2s}
-.cfg-tab:hover{color:var(--text);background:rgba(255,255,255,.06)}
-.cfg-tab.active{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;box-shadow:0 4px 14px rgba(124,58,237,.4)}
-.tema-card{flex:1;max-width:120px;padding:12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:.2s;background:var(--card)}
-.tema-card:hover{border-color:rgba(124,58,237,.4)}
-.tema-card.active{border-color:var(--p1);background:rgba(124,58,237,.08)}
+.ai-hint{
+  background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);
+  border-radius:var(--radius);padding:11px 14px;margin-bottom:14px;
+  font-size:12px;color:var(--text3);line-height:1.6;display:flex;gap:8px;align-items:flex-start;
+}
+.ai-hint strong{color:var(--accent3)}
+
+/* ── CONFIG TABS ── */
+.cfg-tab{padding:7px 16px;border:1px solid transparent;border-radius:var(--radius);font:600 13px 'Sora',sans-serif;cursor:pointer;background:transparent;color:var(--text3);transition:all .18s}
+.cfg-tab:hover{color:var(--text);background:var(--bg3)}
+.cfg-tab.active{background:var(--p1);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(37,99,235,.4)}
+.tema-card{flex:1;max-width:120px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:.2s;background:var(--card)}
+.tema-card:hover{border-color:rgba(37,99,235,.4)}
+.tema-card.active{border-color:var(--p1);background:rgba(37,99,235,.08);box-shadow:0 0 0 2px rgba(37,99,235,.2)}
 .cor-btn:hover{transform:scale(1.15);border-color:white!important}
-.cor-btn.ativa{border-color:white!important;transform:scale(1.1)}
+.cor-btn.ativa{border-color:white!important;transform:scale(1.1);box-shadow:0 0 0 3px rgba(255,255,255,.2)}
+
 /* LIGHT MODE */
-body.light .cfg-tab{color:#64748b}
+body.light{
+  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#e8eef5;--bg4:#dde5ef;
+  --text:#0d1117;--text2:#1f2937;--text3:#4b5563;--text4:#9ca3af;
+  --border:#d1d9e0;--border2:#e5e9ef;--card:#ffffff;--card2:#f5f8fb;--card-hover:#f0f4f8;
+}
+body.light .sidebar{background:#fff;border-right-color:var(--border)}
+body.light .cfg-tab{color:var(--text3)}
 body.light .cfg-tab.active{color:#fff}
-body.light .tema-card{background:#fff;border-color:#e2e8f0}
+body.light .tema-card{background:#fff;border-color:var(--border)}
+body.light .field input,body.light .field select,body.light .field textarea{background:var(--bg3);color:var(--text)}
+body.light .field input:focus,body.light .field select:focus,body.light .field textarea:focus{background:var(--bg4)}
+body.light thead th{background:var(--bg3)}
 
-/* AGENDA SEMANAL */
-.ag-grid{display:grid;grid-template-columns:60px repeat(7,1fr)}
-.ag-header-cell{padding:12px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+/* ── AGENDA SEMANAL REFORMULADA ── */
+.ag-grid{display:grid;grid-template-columns:64px repeat(7,1fr);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.ag-header-cell{
+  padding:14px 8px;text-align:center;
+  font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;
+  border-bottom:2px solid var(--border);border-right:1px solid var(--border2);
+  background:var(--bg2);
+}
 .ag-header-cell:last-child{border-right:none}
-.ag-header-cell.hoje{background:rgba(124,58,237,.12);color:var(--p4)}
-.ag-header-cell .ag-dia-num{font-size:22px;font-weight:800;color:var(--text);display:block;line-height:1.1}
-.ag-header-cell.hoje .ag-dia-num{color:var(--p3)}
-.ag-time-col{padding:8px 6px;text-align:right;font-size:10px;font-weight:600;color:var(--text3);border-right:1px solid var(--border);border-bottom:1px solid rgba(255,255,255,.04);min-height:52px;display:flex;align-items:flex-start;padding-top:6px}
-.ag-slot{border-right:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04);min-height:52px;padding:3px;position:relative;cursor:pointer;transition:.15s}
+.ag-header-cell.hoje{background:rgba(37,99,235,.1);border-bottom-color:var(--p1)}
+.ag-header-cell .ag-dia-num{font-size:26px;font-weight:800;color:var(--text);display:block;line-height:1.1;margin-top:3px}
+.ag-header-cell.hoje .ag-dia-num{
+  color:#fff;background:var(--p1);
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:4px auto 0;font-size:18px;
+  box-shadow:var(--glow-blue);
+}
+.ag-time-col{
+  padding:0 10px 0 0;text-align:right;
+  font-size:10px;font-weight:600;color:var(--text4);font-family:'JetBrains Mono',monospace;
+  border-right:1px solid var(--border);border-bottom:1px solid var(--border2);
+  min-height:72px;display:flex;align-items:flex-start;padding-top:8px;
+  background:var(--bg2);
+}
+.ag-slot{
+  border-right:1px solid var(--border2);border-bottom:1px solid var(--border2);
+  min-height:72px;padding:4px 5px;position:relative;cursor:pointer;transition:.12s;
+}
 .ag-slot:last-child{border-right:none}
-.ag-slot:hover{background:rgba(124,58,237,.06)}
-.ag-slot.hoje-col{background:rgba(124,58,237,.04)}
-.ag-card{border-radius:7px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:2px;transition:.2s;border-left:3px solid transparent}
-.ag-card:hover{filter:brightness(1.15);transform:translateX(1px)}
-.ag-card.agendado{background:rgba(245,158,11,.15);border-left-color:var(--orange);color:var(--orange)}
-.ag-card.confirmado{background:rgba(34,197,94,.15);border-left-color:var(--green);color:var(--green)}
-.ag-card.cancelado{background:rgba(239,68,68,.1);border-left-color:var(--red);color:var(--red);text-decoration:line-through;opacity:.6}
-.ag-card.realizado{background:rgba(255,255,255,.06);border-left-color:rgba(255,255,255,.2);color:var(--text3)}
-.ag-card .ag-card-nome{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.ag-card .ag-card-hora{font-size:10px;opacity:.8;font-weight:600}
+.ag-slot:hover{background:rgba(37,99,235,.04)}
+.ag-slot.hoje-col{background:rgba(37,99,235,.025)}
+.ag-slot.hoje-col:hover{background:rgba(37,99,235,.07)}
 
-#toast{position:fixed;bottom:24px;right:24px;background:#22c55e;color:#fff;padding:13px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(34,197,94,.4);transition:opacity .4s;opacity:0;pointer-events:none}
-#toast.show{opacity:1}
+/* Cards de agendamento — muito mais visíveis */
+.ag-card{
+  border-radius:8px;padding:7px 10px;
+  font-size:12px;font-weight:600;cursor:pointer;margin-bottom:3px;
+  transition:all .2s;border-left:3px solid transparent;
+  position:relative;overflow:hidden;
+}
+.ag-card::before{content:'';position:absolute;inset:0;opacity:.06;background:currentColor}
+.ag-card:hover{transform:translateX(2px) scale(1.01);filter:brightness(1.12)}
+.ag-card.agendado{border-left-color:var(--warn);color:var(--warn);background:rgba(245,158,11,.08)}
+.ag-card.confirmado{border-left-color:var(--accent);color:var(--accent);background:rgba(16,185,129,.08)}
+.ag-card.cancelado{border-left-color:var(--danger);color:var(--danger);background:rgba(239,68,68,.06);text-decoration:line-through;opacity:.5}
+.ag-card.realizado{border-left-color:var(--text4);color:var(--text3);background:rgba(139,148,158,.06)}
+.ag-card .ag-card-nome{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-weight:700;font-size:12px}
+.ag-card .ag-card-hora{font-size:10px;opacity:.8;font-family:'JetBrains Mono',monospace;display:block;margin-bottom:2px}
+.ag-card .ag-card-status{font-size:9px;opacity:.7;display:block;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+
+/* Linha do horário atual */
+.ag-linha-atual{
+  position:absolute;left:0;right:0;height:2px;
+  background:var(--danger);z-index:5;pointer-events:none;
+}
+.ag-linha-atual::before{
+  content:'';position:absolute;left:-4px;top:-4px;
+  width:10px;height:10px;border-radius:50%;background:var(--danger);
+}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;right:24px;
+  color:#fff;padding:12px 20px;border-radius:var(--radius);
+  font-size:13px;font-weight:600;z-index:9999;
+  box-shadow:var(--shadow-lg);transition:all .35s cubic-bezier(.4,0,.2,1);
+  opacity:0;pointer-events:none;transform:translateY(6px);
+  display:flex;align-items:center;gap:8px;max-width:320px;
+}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* ── SCROLLBAR PERSONALIZADA ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text4)}
 </style>
 </head>
 <body>
 
-<div class="bg-orb"><div class="orb orb1"></div><div class="orb orb2"></div></div>
 <div id="toast"></div>
 
 <!-- ═══════════════════════════════════════════════════════ LOGIN -->
@@ -273,6 +554,13 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
         <div class="card-title">⏰ Sessões de Hoje</div>
         <div id="dash-sessoes-hoje"></div>
       </div>
+      <div class="card" id="card-aniversariantes" style="display:none">
+        <div class="card-title" style="justify-content:space-between">
+          <span>🎂 Aniversariantes da Semana</span>
+          <span id="aniv-count" style="font-size:11px;font-weight:600;color:var(--text3);background:var(--bg3);padding:2px 10px;border-radius:20px;border:1px solid var(--border)"></span>
+        </div>
+        <div id="dash-aniversariantes"></div>
+      </div>
       <div class="card">
         <div class="card-title">👥 Pacientes Recentes</div>
         <div id="dash-pacientes-recentes"></div>
@@ -296,7 +584,7 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
     <div id="page-paciente-detalhe" class="page">
       <div class="page-header">
         <div style="display:flex;align-items:center;gap:12px">
-          <button onclick="voltarParaPacientes()" style="background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:var(--text2);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">← Voltar</button>
+          <button onclick="voltarParaPacientes()" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;color:var(--text2);font:600 13px 'Sora';cursor:pointer;transition:.2s">← Voltar</button>
           <h1 id="detalhe-nome">Paciente</h1>
         </div>
         <div class="hactions">
@@ -354,9 +642,9 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
       <!-- Navegação de semana -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;gap:10px">
-          <button onclick="semanaAnterior()" style="background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:var(--text2);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">← Anterior</button>
-          <button onclick="semanaAtual()" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:8px 14px;color:var(--p4);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">Hoje</button>
-          <button onclick="proximaSemana()" style="background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:var(--text2);font:600 13px 'Plus Jakarta Sans';cursor:pointer;transition:.2s">Próxima →</button>
+          <button onclick="semanaAnterior()" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;color:var(--text2);font:600 13px 'Sora';cursor:pointer;transition:.2s">← Anterior</button>
+          <button onclick="semanaAtual()" style="background:var(--p1);border:none;border-radius:var(--radius);padding:8px 14px;color:#fff;font:600 13px 'Sora';cursor:pointer;transition:.2s">Hoje</button>
+          <button onclick="proximaSemana()" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;color:var(--text2);font:600 13px 'Sora';cursor:pointer;transition:.2s">Próxima →</button>
         </div>
         <div id="agenda-semana-label" style="font-size:15px;font-weight:700;color:var(--text2)"></div>
         <div style="display:flex;gap:8px">
@@ -368,8 +656,8 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
       <!-- KPIs rápidos da semana -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px">
         <div class="kpi-card"><div class="kpi-label">Esta Semana</div><div class="kpi-value" id="ag-kpi-semana" style="font-size:26px">0</div><div class="kpi-sub">agendamentos</div></div>
-        <div class="kpi-card"><div class="kpi-label">Confirmados</div><div class="kpi-value" id="ag-kpi-confirmados" style="font-size:26px;color:var(--green)">0</div><div class="kpi-sub up">confirmados</div></div>
-        <div class="kpi-card"><div class="kpi-label">Pendentes</div><div class="kpi-value" id="ag-kpi-pendentes" style="font-size:26px;color:var(--orange)">0</div><div class="kpi-sub">aguardando</div></div>
+        <div class="kpi-card"><div class="kpi-label">Confirmados</div><div class="kpi-value" id="ag-kpi-confirmados" style="font-size:26px;color:var(--accent)">0</div><div class="kpi-sub up">confirmados</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pendentes</div><div class="kpi-value" id="ag-kpi-pendentes" style="font-size:26px;color:var(--warn)">0</div><div class="kpi-sub">aguardando</div></div>
         <div class="kpi-card"><div class="kpi-label">Hoje</div><div class="kpi-value" id="ag-kpi-hoje" style="font-size:26px;color:var(--p3)">0</div><div class="kpi-sub">sessões hoje</div></div>
       </div>
 
@@ -542,7 +830,7 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
             </select>
           </div>
           <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:14px;margin-bottom:16px">
-            <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">🔗 Webhooks N8N</div>
+            <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px">🔗 Webhooks N8N</div>
             <div style="font-size:11px;color:var(--text3);line-height:1.8">
               Sessão: <code style="color:var(--p4);font-size:10px">catherflow/registrar-sessao</code><br>
               Relatório: <code style="color:var(--p4);font-size:10px">catherflow/gerar-relatorio</code><br>
@@ -703,14 +991,6 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
       <div class="field"><label>Horário *</label><input type="time" id="ag-hora" value="09:00"></div>
     </div>
     <div class="grid-2">
-      <div class="field"><label>Duração</label>
-        <select id="ag-duracao">
-          <option value="30">30 min</option>
-          <option value="50" selected>50 min</option>
-          <option value="60">60 min</option>
-          <option value="90">90 min</option>
-        </select>
-      </div>
       <div class="field"><label>Status</label>
         <select id="ag-status">
           <option value="agendado">Agendado</option>
@@ -718,15 +998,14 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
           <option value="cancelado">Cancelado</option>
         </select>
       </div>
+      <div class="field"><label>Confirmado?</label>
+        <select id="ag-confirmado">
+          <option value="false">Não confirmado</option>
+          <option value="true">Confirmado ✓</option>
+        </select>
+      </div>
     </div>
-    <div class="field"><label>Tipo de sessão</label>
-      <select id="ag-tipo">
-        <option value="presencial">Presencial</option>
-        <option value="online">Online</option>
-      </select>
-    </div>
-    <div id="ag-link-wrap" class="field" style="display:none"><label>Link Videochamada</label><input type="url" id="ag-link" placeholder="https://meet.google.com/..."></div>
-    <div class="field"><label>Observações</label><textarea id="ag-obs" placeholder="Anotações sobre este agendamento..." style="min-height:60px"></textarea></div>
+    <div class="field"><label>Link Videochamada (opcional)</label><input type="url" id="ag-link" placeholder="https://meet.google.com/..."></div>
     <button class="btn" id="btn-salvar-ag" onclick="salvarAgendamento()">Salvar Agendamento</button>
   </div>
 </div>
@@ -740,7 +1019,7 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
     </div>
     <div id="ag-det-body" style="margin-bottom:20px"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="btn-ag-iniciar" onclick="iniciarAtendimento()" style="display:none;flex:1;padding:12px;background:linear-gradient(135deg,var(--green),#16a34a);border:none;border-radius:10px;color:#fff;font:700 14px 'Plus Jakarta Sans';cursor:pointer;align-items:center;justify-content:center;gap:6px;transition:.2s">🟢 Iniciar Atendimento</button>
+      <button id="btn-ag-iniciar" onclick="iniciarAtendimento()" style="display:none;flex:1;padding:12px;background:linear-gradient(135deg,var(--accent),#16a34a);border:none;border-radius:10px;color:#fff;font:700 14px 'Sora';cursor:pointer;align-items:center;justify-content:center;gap:6px;transition:.2s">🟢 Iniciar Atendimento</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button class="btn-sm" id="btn-ag-confirmar" onclick="confirmarAgendamento()" style="display:none">✅ Confirmar</button>
@@ -762,15 +1041,9 @@ body.light .tema-card{background:#fff;border-color:#e2e8f0}
       <div class="field"><label>Data</label><input type="date" id="prox-data"></div>
       <div class="field"><label>Horário</label><input type="time" id="prox-hora" value="09:00"></div>
     </div>
-    <div class="field"><label>Tipo</label>
-      <select id="prox-tipo">
-        <option value="presencial">Presencial</option>
-        <option value="online">Online</option>
-      </select>
-    </div>
     <div style="display:flex;gap:8px">
       <button class="btn" onclick="salvarProximaConsulta()" style="flex:1">📅 Agendar</button>
-      <button onclick="fecharModal('modal-proxima-consulta')" style="flex:1;padding:14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:12px;color:var(--text2);font:600 14px 'Plus Jakarta Sans';cursor:pointer">Não agora</button>
+      <button onclick="fecharModal('modal-proxima-consulta')" style="flex:1;padding:14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:12px;color:var(--text2);font:600 14px 'Sora';cursor:pointer">Não agora</button>
     </div>
   </div>
 </div>
@@ -830,9 +1103,9 @@ async function whFetch(url, body){
   const r = await fetch(url, {
     method: 'POST',
     headers: {
-      'Content-Type'       : 'application/json',
-      'x-cf-secret'        : CF_SECRET,           // segredo fixo
-      'x-cf-token'         : token,               // JWT do usuário logado
+      'Content-Type' : 'application/json',
+      'x-cf-secret'  : CF_SECRET,
+      'x-cf-token'   : token,
     },
     body: JSON.stringify(body)
   });
@@ -840,7 +1113,11 @@ async function whFetch(url, body){
     const err = await r.json().catch(()=>({}));
     throw new Error(err.mensagem||err.error||`Erro ${r.status}`);
   }
-  return r.json();
+  // Trata body vazio ou inválido — N8N às vezes retorna sem JSON
+  const text = await r.text();
+  if(!text || text.trim()==='') return {success:true, _fonte:'n8n_sem_body'};
+  try{ return JSON.parse(text); }
+  catch(e){ return {success:true, _fonte:'n8n_body_invalido', _raw:text.substring(0,100)}; }
 }
 
 let token=null, user=null, pacientes=[], sessoes=[], agenda=[];
@@ -895,7 +1172,7 @@ async function registro(){
       localStorage.setItem('cf_user',JSON.stringify(user));
       iniciarApp();
     } else {
-      err.style.color='var(--green)';
+      err.style.color='var(--accent)';
       err.textContent='✓ Conta criada! Verifique seu e-mail para confirmar.';
       err.classList.add('show');
     }
@@ -978,7 +1255,7 @@ async function carregarPacientes(){
 
 async function carregarSessoes(){
   try{
-    const r=await fetch(`${SB}/rest/v1/${TS}?select=*&order=data_sessao.desc`,{
+    const r=await fetch(`${SB}/rest/v1/${TS}?select=*&order=data_sessao.desc,horario.desc`,{
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
     });
     sessoes=await r.json();
@@ -1008,8 +1285,8 @@ async function carregarRelatorios(){
 
 // ── RENDERS ───────────────────────────────────────────────────────────────────
 function renderDashboard(){
-  const hoje=new Date().toISOString().split('T')[0];
-  const mes=new Date().toISOString().substring(0,7);
+  const hoje=localDateStr();
+  const mes=(() => { const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'); })();
   // KPIs
   document.getElementById('kpi-pacientes').textContent=pacientes.filter(p=>p.ativo!==false).length;
   const sessM=sessoes.filter(s=>s.data_sessao?.startsWith(mes));
@@ -1030,23 +1307,38 @@ function renderDashboard(){
   if(!agHoje.length && !sessH.length){
     dH.innerHTML='<div class="empty"><div class="empty-icon">☀️</div><p>Nenhuma atividade registrada para hoje</p></div>';
   } else {
-    // Monta linha do tempo do dia
-    const itens = agHoje.map(a=>{
+    // Monta linha do tempo: agendamentos primeiro, depois sessões sem agendamento
+    const agIds = new Set(agHoje.map(a=>a.id));
+    const sessoesSemAg = sessH.filter(s=>!agHoje.find(a=>a.paciente_id==s.paciente_id));
+    const itensAg = agHoje.map(a=>{
       const p=pacientes.find(x=>x.id==a.paciente_id);
       const sessao=sessoes.find(s=>s.paciente_id==a.paciente_id&&s.data_sessao===hoje);
       return`<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='rgba(124,58,237,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'" onclick="abrirDetalheAgendamento(${a.id})">
         <div style="font-size:18px;font-weight:800;color:var(--p3);min-width:52px;text-align:center">${a.hora?.substring(0,5)||'--:--'}</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:14px">${p?.nome||'—'}</div>
-          <div style="font-size:12px;color:var(--text3)">${a.tipo||'presencial'} · ${a.duracao_min||50} min</div>
+          <div style="font-size:12px;color:var(--text3)">${a.hora?.substring(0,5)||'--:--'}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           ${sessao?'<span class="badge badge-green">✓ Sessão registrada</span>':'<span class="badge badge-orange">Aguardando</span>'}
           <span class="badge badge-${a.status==='confirmado'?'green':a.status==='cancelado'?'red':'blue'}">${a.status||'agendado'}</span>
         </div>
       </div>`;
-    }).join('');
-    dH.innerHTML = itens || '<div class="empty"><div class="empty-icon">📋</div><p>Nenhum agendamento hoje, mas há sessões registradas</p></div>';
+    });
+    const itensSessAg = sessoesSemAg.map(s=>{
+      const p=pacientes.find(x=>x.id==s.paciente_id);
+      const hr=s.horario?s.horario.substring(0,5):'--:--';
+      return`<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='rgba(34,197,94,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'" onclick="abrirDetalheSession(${s.id})">
+        <div style="font-size:18px;font-weight:800;color:var(--accent);min-width:52px;text-align:center">${hr}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px">${p?.nome||'—'}</div>
+          <div style="font-size:12px;color:var(--text3)">${s.tipo_sessao||'presencial'} · Sessão ${s.numero_sessao||'—'}</div>
+        </div>
+        <span class="badge badge-green">✓ Sessão registrada</span>
+      </div>`;
+    });
+    const todosItens=[...itensAg,...itensSessAg].join('');
+    dH.innerHTML = todosItens || '<div class="empty"><div class="empty-icon">📋</div><p>Nenhum agendamento hoje, mas há sessões registradas</p></div>';
   }
   // Pacientes recentes
   const dP=document.getElementById('dash-pacientes-recentes');
@@ -1061,6 +1353,80 @@ function renderDashboard(){
         return`<tr><td><strong>${p.nome}</strong></td><td>${p.telefone||'—'}</td><td>${ult?fmtDate(ult.data_sessao):'Nunca'}</td><td>${ss.length}</td></tr>`;
       }).join('')}</tbody></table></div>`;
   }
+  // Aniversariantes
+  renderAniversariantes();
+}
+
+function renderAniversariantes(){
+  const hoje = new Date();
+  const card = document.getElementById('card-aniversariantes');
+  const div = document.getElementById('dash-aniversariantes');
+  const countEl = document.getElementById('aniv-count');
+  if(!pacientes.length || !div) return;
+
+  // Monta lista de aniversariantes nos próximos 7 dias
+  const anivs = [];
+  pacientes.forEach(p=>{
+    if(!p.data_nascimento) return;
+    const nasc = new Date(p.data_nascimento+'T12:00:00');
+    // Aniversário deste ano
+    const anivEsteAno = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
+    // Se já passou, testa próximo ano
+    let anivRef = new Date(anivEsteAno);
+    const diffHoje = Math.floor((anivEsteAno - hoje) / (1000*60*60*24));
+    if(diffHoje < -1) {
+      // passou: testa próximo ano
+      anivRef = new Date(hoje.getFullYear()+1, nasc.getMonth(), nasc.getDate());
+    }
+    const diff = Math.floor((anivRef - hoje) / (1000*60*60*24));
+    if(diff >= 0 && diff <= 6){
+      anivs.push({...p, _diff: diff, _anivRef: anivRef});
+    }
+  });
+
+  if(!anivs.length){
+    card.style.display='none';
+    return;
+  }
+  card.style.display='block';
+  // Ordena por proximidade
+  anivs.sort((a,b)=>a._diff-b._diff);
+  countEl.textContent = anivs.length + ' essa semana';
+
+  const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+  div.innerHTML = anivs.map(p=>{
+    const ini = p.nome.trim()[0].toUpperCase();
+    const tel = (p.telefone||'').replace(/\D/g,'');
+    const wppHref = tel ? `https://wa.me/55${tel}?text=${encodeURIComponent(`🎂 Feliz aniversário, ${p.nome.split(' ')[0]}! Que seu dia seja especial! 🥳`)}` : null;
+
+    // Label do dia
+    let labelHtml = '';
+    if(p._diff === 0){
+      labelHtml = `<span class="aniv-badge-hoje">🎉 Hoje!</span>`;
+    } else if(p._diff === 1){
+      labelHtml = `<span class="aniv-badge-amanha">Amanhã</span>`;
+    } else {
+      const nomeDia = diasSemana[p._anivRef.getDay()];
+      labelHtml = `<span class="aniv-badge-semana">${nomeDia}</span>`;
+    }
+
+    // Idade que vai fazer
+    const nasc = new Date(p.data_nascimento+'T12:00:00');
+    const idade = p._anivRef.getFullYear() - nasc.getFullYear();
+    const dataFmt = `${nasc.getDate()} de ${meses[nasc.getMonth()]} · ${idade} anos`;
+
+    return`<div class="aniv-item">
+      <div class="aniv-avatar">${ini}</div>
+      <div class="aniv-info">
+        <div class="aniv-nome">${p.nome}</div>
+        <div class="aniv-data">${dataFmt}</div>
+      </div>
+      ${labelHtml}
+      ${wppHref ? `<a href="${wppHref}" target="_blank" class="aniv-wpp" title="Enviar parabéns no WhatsApp">💬</a>` : '<div style="width:36px"></div>'}
+    </div>`;
+  }).join('');
 }
 
 function renderPacientes(){
@@ -1090,21 +1456,42 @@ function renderSessoes(){
   if(!sessoes.length){
     div.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';return;
   }
-  const hoje=new Date().toISOString().split('T')[0];
+  const hoje=localDateStr();
+  // Pré-computa número sequencial por paciente (fallback se numero_sessao não veio do banco)
+  const contadorPac={};
+  // sessoes já vem ordenado desc; invertemos para contar
+  const sessoesAsc=[...sessoes].reverse();
+  sessoesAsc.forEach(s=>{
+    const pid=s.paciente_id;
+    contadorPac[pid]=(contadorPac[pid]||0)+1;
+    s._seq=contadorPac[pid];
+  });
   div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Tipo</th><th>Nº</th><th>Queixas</th><th>Valor</th><th>Pgto</th><th></th></tr></thead><tbody>${
     sessoes.slice(0,50).map(s=>{
       const p=pacientes.find(x=>x.id==s.paciente_id);
       const isHoje=s.data_sessao===hoje;
+      // Horário: tenta campo horario, senão busca agendamento do mesmo dia
+      let hrExib = '—';
+      if(s.horario && s.horario.length>=5) hrExib = s.horario.substring(0,5);
+      else {
+        const ag=agenda.find(a=>a.paciente_id==s.paciente_id&&a.data===s.data_sessao);
+        if(ag?.hora) hrExib=ag.hora.substring(0,5);
+      }
+      // Nº sessão: usa campo do banco, senão usa sequencial calculado
+      const numSess = s.numero_sessao || s._seq || '—';
       return`<tr class="row-clickable${isHoje?' row-hoje':''} status-${s.status_pagamento||'pendente'}" onclick="abrirDetalheSession(${s.id})">
         <td><strong>${fmtDate(s.data_sessao)}</strong>${isHoje?'<span class="badge badge-purple" style="margin-left:6px">Hoje</span>':''}</td>
-        <td>${s.horario?s.horario.substring(0,5):'—'}</td>
+        <td><strong>${hrExib}</strong></td>
         <td><strong>${p?.nome||'—'}</strong></td>
         <td><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
-        <td><span class="badge badge-gray">${s.numero_sessao||'—'}</span></td>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">${s.queixas_principais||'—'}</td>
-        <td><strong>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
+        <td><span class="badge badge-purple">${numSess}</span></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">${s.queixas_principais||'—'}</td>
+        <td><strong style="color:${(parseFloat(s.valor)||0)>0?'var(--accent)':'var(--text3)'}">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
         <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></td>
-        <td onclick="event.stopPropagation()"><button class="btn-sm" onclick="abrirEditarSessao(${s.id})">✏️</button></td>
+        <td onclick="event.stopPropagation()" style="display:flex;gap:4px;align-items:center">
+          <button class="btn-sm" onclick="abrirEditarSessao(${s.id})" title="Editar">✏️</button>
+          <button class="btn-danger" onclick="excluirSessaoDireto(${s.id})" title="Excluir sessão">🗑️</button>
+        </td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
 }
@@ -1139,7 +1526,7 @@ function semanaAtual(){ agendaSemanaOffset=0; renderAgenda(); }
 function renderAgenda(){
   const inicio = getInicioSemana(agendaSemanaOffset);
   const dias = Array.from({length:7},(_,i)=>{ const d=new Date(inicio); d.setDate(inicio.getDate()+i); return d; });
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = localDateStr();
 
   // Label semana
   const opts = {day:'2-digit',month:'short'};
@@ -1148,7 +1535,7 @@ function renderAgenda(){
     `${inicio.toLocaleDateString('pt-BR',opts)} – ${fim.toLocaleDateString('pt-BR',opts)}`;
 
   // KPIs
-  const semanaStrs = dias.map(d=>d.toISOString().split('T')[0]);
+  const semanaStrs = dias.map(d=>localDateStr(d));
   const agSemana = agenda.filter(a=>semanaStrs.includes(a.data));
   document.getElementById('ag-kpi-semana').textContent = agSemana.length;
   document.getElementById('ag-kpi-confirmados').textContent = agSemana.filter(a=>a.status==='confirmado').length;
@@ -1163,31 +1550,56 @@ function renderGradeSemana(dias, hoje){
   const diasNomes = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
   const horarios = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
 
+  // Hora atual para linha indicadora
+  const agora = new Date();
+  const horaAtualMin = agora.getHours() * 60 + agora.getMinutes();
+  const slotAltura = 72; // min-height dos slots
+  const horaInicio = 7; // primeira hora exibida
+
   let html = '<div class="ag-grid">';
   // Header
-  html += '<div class="ag-header-cell" style="border-bottom:1px solid var(--border)"></div>';
+  html += '<div class="ag-header-cell" style="border-bottom:2px solid var(--border);background:var(--bg2)"></div>';
   dias.forEach((d,i)=>{
-    const str = d.toISOString().split('T')[0];
+    const str = localDateStr(d);
     const isHoje = str===hoje;
     html += `<div class="ag-header-cell${isHoje?' hoje':''}">
-      <span style="font-size:10px">${diasNomes[i]}</span>
-      <span class="ag-dia-num">${d.getDate()}</span>
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:1px">${diasNomes[i]}</span>
+      ${isHoje
+        ? `<span class="ag-dia-num">${d.getDate()}</span>`
+        : `<span class="ag-dia-num">${d.getDate()}</span>`
+      }
     </div>`;
   });
 
   // Linhas de horário
-  horarios.forEach(hr=>{
+  horarios.forEach((hr,hrIdx)=>{
+    const hrNum = parseInt(hr.split(':')[0]);
     html += `<div class="ag-time-col">${hr}</div>`;
     dias.forEach(d=>{
-      const str = d.toISOString().split('T')[0];
+      const str = localDateStr(d);
       const isHoje = str===hoje;
-      const ags = agenda.filter(a=>a.data===str && a.hora?.startsWith(hr.split(':')[0]+':'));
-      html += `<div class="ag-slot${isHoje?' hoje-col':''}" onclick="abrirModalAgendaData('${str}','${hr}')">`;
+      const ags = agenda.filter(a=>{
+        if(a.data!==str) return false;
+        if(!a.hora) return false;
+        return a.hora.substring(0,2) === hr.split(':')[0];
+      });
+
+      // Posição da linha do horário atual neste slot
+      let linhaAtual = '';
+      if(isHoje && hrNum === agora.getHours()){
+        const pct = (agora.getMinutes() / 60) * 100;
+        linhaAtual = `<div class="ag-linha-atual" style="top:${pct}%"></div>`;
+      }
+
+      html += `<div class="ag-slot${isHoje?' hoje-col':''}" onclick="abrirModalAgendaData('${str}','${hr}')">
+        ${linhaAtual}`;
       ags.forEach(a=>{
         const pac = pacientes.find(p=>p.id==a.paciente_id);
-        html += `<div class="ag-card ${a.status||'agendado'}" onclick="event.stopPropagation();abrirDetalheAgendamento(${a.id})" title="${pac?.nome||'—'} — ${a.hora?.substring(0,5)}">
+        const statusLabel = {agendado:'Aguardando',confirmado:'Confirmado',cancelado:'Cancelado',realizado:'Realizado'}[a.status]||a.status||'Agendado';
+        html += `<div class="ag-card ${a.status||'agendado'}" onclick="event.stopPropagation();abrirDetalheAgendamento(${a.id})">
           <span class="ag-card-hora">${a.hora?.substring(0,5)}</span>
           <span class="ag-card-nome">${pac?.nome||'—'}</span>
+          <span class="ag-card-status">${statusLabel}</span>
         </div>`;
       });
       html += '</div>';
@@ -1198,29 +1610,29 @@ function renderGradeSemana(dias, hoje){
 }
 
 function renderListaAgenda(){
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = localDateStr();
   const inicio = getInicioSemana(agendaSemanaOffset);
   const fim = new Date(inicio); fim.setDate(inicio.getDate()+6);
-  const inicioStr = inicio.toISOString().split('T')[0];
-  const fimStr = fim.toISOString().split('T')[0];
+  const inicioStr = localDateStr(inicio);
+  const fimStr = localDateStr(fim);
   const filtrados = agenda.filter(a=>a.data>=inicioStr&&a.data<=fimStr).sort((a,b)=>a.data===b.data?a.hora?.localeCompare(b.hora||''):a.data.localeCompare(b.data));
   const div = document.getElementById('lista-agenda');
   if(!filtrados.length){
-    div.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>Nenhum agendamento nesta semana</p></div>';return;
+    div.innerHTML='<div class="empty"><span class="empty-icon">📅</span><p>Nenhum agendamento nesta semana</p></div>';return;
   }
-  div.innerHTML=`<table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${
+  div.innerHTML=`<table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>Status</th><th>Confirmado</th><th>Ações</th></tr></thead><tbody>${
     filtrados.map(a=>{
       const p=pacientes.find(x=>x.id==a.paciente_id);
       const isHoje=a.data===hoje;
-      return`<tr style="${isHoje?'background:rgba(124,58,237,.06)':''}">
-        <td>${fmtDate(a.data)}${isHoje?'<span class="badge badge-purple" style="margin-left:6px">Hoje</span>':''}</td>
-        <td><strong>${a.hora?.substring(0,5)||'—'}</strong></td>
-        <td><strong style="cursor:pointer;color:var(--p4)" onclick="abrirDetalhePaciente(${p?.id})">${p?.nome||'—'}</strong></td>
-        <td><span style="font-size:12px;color:var(--text3)">${a.tipo||'presencial'}</span></td>
+      return`<tr class="row-clickable${isHoje?' row-hoje':''}" onclick="abrirDetalheAgendamento(${a.id})">
+        <td><strong>${fmtDate(a.data)}</strong>${isHoje?'<span class="badge badge-purple" style="margin-left:6px">Hoje</span>':''}</td>
+        <td><strong style="font-family:'JetBrains Mono',monospace;font-size:14px">${a.hora?.substring(0,5)||'—'}</strong></td>
+        <td><strong style="color:var(--p3);cursor:pointer" onclick="event.stopPropagation();abrirDetalhePaciente(${p?.id})">${p?.nome||'—'}</strong></td>
         <td><span class="badge badge-${a.status==='confirmado'?'green':a.status==='cancelado'?'red':'orange'}">${a.status||'agendado'}</span></td>
-        <td style="display:flex;gap:6px">
+        <td>${a.confirmado?'<span class="badge badge-green">✓ Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
+        <td onclick="event.stopPropagation()" style="display:flex;gap:4px">
           <button class="btn-sm" onclick="abrirDetalheAgendamento(${a.id})">Ver</button>
-          <button class="btn-danger" onclick="excluirAgendamento(${a.id})">Excluir</button>
+          <button class="btn-danger" onclick="excluirAgendamento(${a.id})">🗑️</button>
         </td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -1240,7 +1652,7 @@ function abrirDetalheAgendamento(id){
   const pendencias = sessoes.filter(s=>s.paciente_id==agendamentoAtual.paciente_id&&s.status_pagamento==='pendente');
   const totalPendente = pendencias.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
   const sessaoHoje = sessoes.find(s=>s.paciente_id==agendamentoAtual.paciente_id&&s.data_sessao===agendamentoAtual.data);
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = localDateStr();
   const isHoje = agendamentoAtual.data === hoje;
   const isFuturo = agendamentoAtual.data > hoje;
   const isPast = agendamentoAtual.data < hoje;
@@ -1256,7 +1668,7 @@ function abrirDetalheAgendamento(id){
       <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">👤 Paciente</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Total de sessões</div><strong style="color:var(--p3)">${totalSessoes}</strong></div>
-        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Pendência financeira</div><strong style="color:${totalPendente>0?'var(--orange)':'var(--green)'}">${totalPendente>0?'R$ '+totalPendente.toFixed(2):'Em dia ✓'}</strong></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Pendência financeira</div><strong style="color:${totalPendente>0?'var(--warn)':'var(--accent)'}">${totalPendente>0?'R$ '+totalPendente.toFixed(2):'Em dia ✓'}</strong></div>
         <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Telefone</div><strong style="font-size:12px">${pac?.telefone||'—'}</strong></div>
       </div>
     </div>
@@ -1273,7 +1685,7 @@ function abrirDetalheAgendamento(id){
       </div>
       <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px">
         <div style="font-size:10px;color:var(--text3);margin-bottom:4px">📍 Tipo</div>
-        <span class="${agendamentoAtual.tipo==='online'?'tipo-online':'tipo-presencial'}">${agendamentoAtual.tipo||'presencial'}</span>
+        <span class="${agendamentoAtual.link_videochamada?'tipo-online':'tipo-presencial'}">${agendamentoAtual.link_videochamada?'Online':'Presencial'}</span>
       </div>
       <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px">
         <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Status</div>
@@ -1313,7 +1725,7 @@ async function confirmarAgendamento(){
     await fetch(`${SB}/rest/v1/${TA}?id=eq.${agendamentoAtual.id}`,{
       method:'PATCH',
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({status:'confirmado',confirmado:true})
+      body:JSON.stringify({status:'confirmado'})
     });
     toast('✅ Agendamento confirmado!');
     fecharModal('modal-ag-detalhe');
@@ -1338,7 +1750,14 @@ async function cancelarAgendamento(){
 async function excluirAgendamentoDetalhe(){
   if(!agendamentoAtual||!confirm('Excluir este agendamento?')) return;
   fecharModal('modal-ag-detalhe');
-  await excluirAgendamento(agendamentoAtual.id);
+  try{
+    await fetch(`${SB}/rest/v1/${TA}?id=eq.${agendamentoAtual.id}`,{
+      method:'DELETE',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    toast('Agendamento excluído.','orange');
+    await carregarAgenda(); renderAgenda(); renderDashboard();
+  }catch(e){toast('Erro ao excluir','red')}
 }
 
 function iniciarAtendimento(){
@@ -1355,7 +1774,7 @@ function iniciarAtendimento(){
   document.getElementById('sess-pac').value = agendamentoAtual.paciente_id;
   document.getElementById('sess-data').value = agendamentoAtual.data;
   document.getElementById('sess-horario').value = agendamentoAtual.hora?.substring(0,5)||'09:00';
-  document.getElementById('sess-tipo').value = agendamentoAtual.tipo||'presencial';
+  
   // Número sequencial automático
   const totalSessoes = sessoes.filter(s=>s.paciente_id==agendamentoAtual.paciente_id).length;
   document.getElementById('sess-numero').value = totalSessoes + 1;
@@ -1378,18 +1797,19 @@ async function salvarProximaConsulta(){
         paciente_id:_pacIdProximaConsulta,
         data,
         hora:hora+':00',
-        tipo:document.getElementById('prox-tipo').value||'presencial',
         status:'agendado',
-        duracao_min:50,
         confirmado:false
       })
     });
-    if(!r.ok) throw new Error('Erro ao agendar');
+    if(!r.ok){
+      const errBody=await r.json().catch(()=>({}));
+      throw new Error(errBody.message||errBody.details||`HTTP ${r.status}`);
+    }
     fecharModal('modal-proxima-consulta');
     toast('✅ Próxima consulta agendada!');
     await carregarAgenda();
     renderAgenda(); renderDashboard();
-  }catch(e){toast('Erro: '+e.message,'red')}
+  }catch(e){toast('Erro: '+e.message,'red');console.error(e)}
 }
 
 function abrirSessaoDoAgendamento(){
@@ -1439,9 +1859,13 @@ function abrirModalPaciente(){
 }
 
 function abrirModalSessao(){
+  if(!pacientes.length){
+    toast('⚠️ Cadastre um paciente antes de registrar uma sessão','orange');
+    return;
+  }
   const sel=document.getElementById('sess-pac');
-  sel.innerHTML=pacientes.length?pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join(''):'<option value="">Cadastre um paciente primeiro</option>';
-  document.getElementById('sess-data').value=new Date().toISOString().split('T')[0];
+  sel.innerHTML=pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  document.getElementById('sess-data').value=localDateStr();
   document.getElementById('sess-horario').value=new Date().toTimeString().substring(0,5);
   document.getElementById('sess-tipo').value='presencial';
   document.getElementById('sess-numero').value='';
@@ -1459,17 +1883,11 @@ function abrirModalSessaoParaPaciente(pacId){
 function abrirModalAgenda(){
   const sel=document.getElementById('ag-pac');
   sel.innerHTML=pacientes.length?pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join(''):'<option value="">Cadastre um paciente primeiro</option>';
-  document.getElementById('ag-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('ag-data').value=localDateStr();
   document.getElementById('ag-hora').value='09:00';
-  document.getElementById('ag-duracao').value='50';
   document.getElementById('ag-status').value='agendado';
-  document.getElementById('ag-tipo').value='presencial';
+  document.getElementById('ag-confirmado').value='false';
   document.getElementById('ag-link').value='';
-  document.getElementById('ag-obs').value='';
-  document.getElementById('ag-link-wrap').style.display='none';
-  document.getElementById('ag-tipo').onchange=function(){
-    document.getElementById('ag-link-wrap').style.display=this.value==='online'?'block':'none';
-  };
   document.getElementById('modal-agenda').classList.add('show');
 }
 
@@ -1480,9 +1898,9 @@ function abrirModalRelatorio(){
   document.getElementById('rel-periodo').value='mes';
   document.getElementById('periodo-custom').style.display='none';
   const hoje=new Date();
-  document.getElementById('rel-fim').value=hoje.toISOString().split('T')[0];
+  document.getElementById('rel-fim').value=localDateStr(hoje);
   const ini=new Date(hoje); ini.setMonth(ini.getMonth()-1);
-  document.getElementById('rel-inicio').value=ini.toISOString().split('T')[0];
+  document.getElementById('rel-inicio').value=localDateStr(ini);
   document.getElementById('modal-relatorio').classList.add('show');
 }
 
@@ -1503,6 +1921,19 @@ function abrirDetalheSession(id){
   document.getElementById('sd-titulo').textContent =
     `${p?.nome||'Paciente'} — ${fmtDate(sessaoAtual.data_sessao)}`;
 
+  // Horário com fallback no agendamento
+  let hrExib='—';
+  if(sessaoAtual.horario&&sessaoAtual.horario.length>=5) hrExib=sessaoAtual.horario.substring(0,5);
+  else{const ag=agenda.find(a=>a.paciente_id==sessaoAtual.paciente_id&&a.data===sessaoAtual.data_sessao);if(ag?.hora)hrExib=ag.hora.substring(0,5);}
+
+  // Número com fallback sequencial
+  let numExib = sessaoAtual.numero_sessao;
+  if(!numExib){
+    const ss=[...sessoes].filter(s=>s.paciente_id==sessaoAtual.paciente_id).reverse();
+    const idx=ss.findIndex(s=>s.id==sessaoAtual.id);
+    numExib = idx>=0 ? idx+1 : '—';
+  }
+
   const campo = (label,val,destaque=false)=>val?`
     <div style="margin-bottom:14px">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">${label}</div>
@@ -1512,9 +1943,9 @@ function abrirDetalheSession(id){
   document.getElementById('sd-body').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;padding:14px;background:rgba(255,255,255,.03);border-radius:12px;border:1px solid var(--border)">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Data</div><strong>${fmtDate(sessaoAtual.data_sessao)}</strong></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Horário</div><strong>${sessaoAtual.horario?.substring(0,5)||'—'}</strong></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Horário</div><strong>${hrExib}</strong></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Tipo</div><span class="${sessaoAtual.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${sessaoAtual.tipo_sessao||'presencial'}</span></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Sessão Nº</div><span class="badge badge-gray">${sessaoAtual.numero_sessao||'—'}</span></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Sessão Nº</div><span class="badge badge-purple">${numExib}</span></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Valor</div><strong>R$ ${(parseFloat(sessaoAtual.valor)||0).toFixed(2)}</strong></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Pagamento</div><span class="badge badge-${sessaoAtual.status_pagamento==='pago'?'green':'orange'}">${sessaoAtual.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></div>
     </div>
@@ -1524,7 +1955,7 @@ function abrirDetalheSession(id){
     ${campo('Pontos de Atenção', sessaoAtual.pontos_atencao)}
     ${campo('Próximos Passos', sessaoAtual.proximos_passos)}
     ${sessaoAtual.resumo_ia?`<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--p4);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🤖 Resumo IA</div><div style="font-size:13px;color:var(--text2);line-height:1.6;background:rgba(124,58,237,.06);border-radius:8px;padding:12px;border:1px solid rgba(124,58,237,.2)">${sessaoAtual.resumo_ia}</div></div>`:''}
-    ${sessaoAtual.anotacao_clinica?`<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🔒 Anotação Clínica Privada</div><div style="font-size:13px;color:var(--text2);line-height:1.6;background:rgba(245,158,11,.06);border-radius:8px;padding:12px;border:1px solid rgba(245,158,11,.2)">${sessaoAtual.anotacao_clinica}</div></div>`:''}
+    ${sessaoAtual.anotacao_clinica?`<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🔒 Anotação Clínica Privada</div><div style="font-size:13px;color:var(--text2);line-height:1.6;background:rgba(245,158,11,.06);border-radius:8px;padding:12px;border:1px solid rgba(245,158,11,.2)">${sessaoAtual.anotacao_clinica}</div></div>`:''}
   `;
   document.getElementById('modal-sessao-detalhe').classList.add('show');
 }
@@ -1559,7 +1990,7 @@ async function salvarEdicaoSessao(){
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Prefer':'return=representation'},
       body:JSON.stringify({
         data_sessao:document.getElementById('edit-sess-data').value,
-        horario:document.getElementById('edit-sess-horario').value+':00',
+        horario:(document.getElementById('edit-sess-horario').value||'').length>=4 ? document.getElementById('edit-sess-horario').value+':00' : null,
         tipo_sessao:document.getElementById('edit-sess-tipo').value,
         numero_sessao:document.getElementById('edit-sess-numero').value.trim()||null,
         queixas_principais:document.getElementById('edit-sess-queixas').value.trim()||null,
@@ -1598,6 +2029,21 @@ async function excluirSessaoAtual(){
   }catch(e){toast('Erro ao excluir: '+e.message,'red');console.error(e)}
 }
 
+async function excluirSessaoDireto(id){
+  if(!confirm('Excluir esta sessão? Esta ação não pode ser desfeita.')) return;
+  try{
+    const r = await fetch(`${SB}/rest/v1/${TS}?id=eq.${id}&user_id=eq.${user.id}`,{
+      method:'DELETE',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||`Erro ${r.status}`);}
+    toast('✅ Sessão excluída.','orange');
+    await carregarSessoes();
+    renderDashboard(); renderSessoes();
+    if(pacienteAtual) abrirDetalhePaciente(pacienteAtual.id);
+  }catch(e){toast('Erro: '+e.message,'red');console.error(e)}
+}
+
 // ── DETALHE PACIENTE ─────────────────────────────────────────────────────────
 let pacienteAtual = null;
 
@@ -1615,7 +2061,7 @@ function abrirDetalhePaciente(id){
   document.getElementById('detalhe-queixa').textContent = pacienteAtual.queixa_inicial||'—';
 
   // Agendamentos futuros
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = localDateStr();
   const ags = agenda.filter(a=>a.paciente_id==id&&a.data>=hoje&&a.status!=='cancelado');
   const divAg = document.getElementById('detalhe-agenda');
   if(!ags.length){
@@ -1636,17 +2082,26 @@ function abrirDetalhePaciente(id){
   if(!ss.length){
     divSess.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';
   } else {
+    // Conta sequencial local
+    const ssAsc=[...ss].reverse();
+    ssAsc.forEach((s,i)=>s._seq=i+1);
     divSess.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Nº</th><th>Data</th><th>Horário</th><th>Tipo</th><th>Queixas</th><th>Evolução</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${
-      ss.map(s=>`<tr>
-        <td><span class="badge badge-purple">${s.numero_sessao||'—'}</span></td>
-        <td>${fmtDate(s.data_sessao)}</td>
-        <td>${s.horario?s.horario.substring(0,5):'—'}</td>
-        <td><span style="font-size:11px;color:var(--text3)">${s.tipo_sessao||'presencial'}</span></td>
-        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
-        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.evolucao||'—'}</td>
-        <td>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
-        <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td>
-      </tr>`).join('')}</tbody></table></div>`;
+      ss.map(s=>{
+        let hrExib='—';
+        if(s.horario&&s.horario.length>=5) hrExib=s.horario.substring(0,5);
+        else{const ag=agenda.find(a=>a.paciente_id==s.paciente_id&&a.data===s.data_sessao);if(ag?.hora)hrExib=ag.hora.substring(0,5);}
+        const numSess=s.numero_sessao||s._seq||'—';
+        return`<tr>
+          <td><span class="badge badge-purple">${numSess}</span></td>
+          <td>${fmtDate(s.data_sessao)}</td>
+          <td><strong>${hrExib}</strong></td>
+          <td><span style="font-size:11px;color:var(--text3)">${s.tipo_sessao||'presencial'}</span></td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.queixas_principais||'—'}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.evolucao||'—'}</td>
+          <td>R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
+          <td><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento||'pendente'}</span></td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`;
   }
 }
 
@@ -1754,79 +2209,123 @@ async function salvarSessao(){
   const pacId=document.getElementById('sess-pac').value;
   if(!pacId){toast('Selecione um paciente','red');return}
   const btn=document.getElementById('btn-salvar-sess');
-  btn.disabled=true; btn.textContent='⏳ Gerando resumo IA...';
+  btn.disabled=true; btn.textContent='⏳ Salvando...';
+
+  const payload={
+    user_id:user.id,
+    paciente_id:parseInt(pacId),
+    data_sessao:document.getElementById('sess-data').value,
+    horario:(document.getElementById('sess-horario').value||'').length>=4 ? document.getElementById('sess-horario').value+':00' : null,
+    tipo_sessao:document.getElementById('sess-tipo').value||'presencial',
+    numero_sessao:document.getElementById('sess-numero').value.trim()||null,
+    queixas_principais:document.getElementById('sess-queixas').value.trim()||null,
+    intervencoes:document.getElementById('sess-intervencoes').value.trim()||null,
+    evolucao:document.getElementById('sess-evolucao').value.trim()||null,
+    pontos_atencao:document.getElementById('sess-atencao').value.trim()||null,
+    proximos_passos:document.getElementById('sess-proximos').value.trim()||null,
+    anotacao_clinica:document.getElementById('sess-anotacao').value.trim()||null,
+    valor:parseFloat(document.getElementById('sess-valor').value)||null,
+    status_pagamento:document.getElementById('sess-status').value
+  };
+
+  let salvoViaIA = false;
+
   try{
-    const d=await whFetch(WH.sessao,{
-      user_id:user.id,
-      paciente_id:parseInt(pacId),
-      data_sessao:document.getElementById('sess-data').value,
-      horario:document.getElementById('sess-horario').value+':00',
-      tipo_sessao:document.getElementById('sess-tipo').value||'presencial',
-      numero_sessao:document.getElementById('sess-numero').value.trim()||null,
-      queixas_principais:document.getElementById('sess-queixas').value.trim(),
-      intervencoes:document.getElementById('sess-intervencoes').value.trim(),
-      evolucao:document.getElementById('sess-evolucao').value.trim(),
-      pontos_atencao:document.getElementById('sess-atencao').value.trim(),
-      proximos_passos:document.getElementById('sess-proximos').value.trim(),
-      anotacao_clinica:document.getElementById('sess-anotacao').value.trim(),
-      valor:parseFloat(document.getElementById('sess-valor').value)||null,
-      status_pagamento:document.getElementById('sess-status').value
-    });
-    if(!d.success) throw new Error(d.mensagem||'Erro');
-    // Marcar agendamento de origem como realizado
-    if(window._agendamentoOrigemId){
-      await fetch(`${SB}/rest/v1/${TA}?id=eq.${window._agendamentoOrigemId}`,{
-        method:'PATCH',
-        headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
-        body:JSON.stringify({status:'realizado'})
-      });
-      window._agendamentoOrigemId = null;
+    // Tenta via N8N (com IA) primeiro
+    btn.textContent='🤖 Gerando resumo IA...';
+    const d = await whFetch(WH.sessao, payload);
+    if(d && d.success !== false){
+      salvoViaIA = true;
     }
-    fecharModal('modal-sessao');
-    await carregarSessoes(); await carregarAgenda();
-    renderDashboard(); renderSessoes(); renderAgenda();
-    if(pacienteAtual&&pacienteAtual.id==pacId) abrirDetalhePaciente(pacId);
-    toast('✅ Sessão salva com resumo IA gerado!');
-    // Oferecer próxima consulta
-    _pacIdProximaConsulta = parseInt(pacId);
-    const prox = new Date(); prox.setDate(prox.getDate()+7);
-    document.getElementById('prox-data').value = prox.toISOString().split('T')[0];
-    document.getElementById('prox-hora').value = document.getElementById('sess-horario')?.value||'09:00';
-    document.getElementById('prox-tipo').value = document.getElementById('sess-tipo')?.value||'presencial';
-    setTimeout(()=>document.getElementById('modal-proxima-consulta').classList.add('show'), 400);
-  }catch(e){toast('Erro: '+e.message,'red')}
-  finally{btn.disabled=false;btn.textContent='Salvar Sessão'}
+  }catch(e){
+    console.warn('N8N indisponível, salvando direto no Supabase:', e.message);
+  }
+
+  // Se N8N falhou, salva direto no Supabase
+  if(!salvoViaIA){
+    try{
+      btn.textContent='💾 Salvando...';
+      const r = await fetch(`${SB}/rest/v1/${TS}`,{
+        method:'POST',
+        headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify(payload)
+      });
+      if(!r.ok){
+        const errBody = await r.json().catch(()=>({}));
+        throw new Error(errBody.message||errBody.details||`Erro ${r.status}`);
+      }
+    }catch(err){
+      toast('Erro ao salvar: '+err.message,'red');
+      btn.disabled=false; btn.textContent='Salvar Sessão';
+      return;
+    }
+  }
+
+  // Marcar agendamento de origem como realizado
+  if(window._agendamentoOrigemId){
+    await fetch(`${SB}/rest/v1/${TA}?id=eq.${window._agendamentoOrigemId}`,{
+      method:'PATCH',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({status:'realizado'})
+    }).catch(()=>{});
+    window._agendamentoOrigemId = null;
+  }
+
+  fecharModal('modal-sessao');
+  await carregarSessoes(); await carregarAgenda();
+  renderDashboard(); renderSessoes(); renderAgenda();
+  if(pacienteAtual&&pacienteAtual.id==pacId) abrirDetalhePaciente(pacId);
+
+  toast(salvoViaIA ? '✅ Sessão salva com resumo IA!' : '✅ Sessão salva! (IA indisponível no momento)');
+
+  // Oferecer próxima consulta
+  _pacIdProximaConsulta = parseInt(pacId);
+  const prox = new Date(); prox.setDate(prox.getDate()+7);
+  document.getElementById('prox-data').value = localDateStr(prox);
+  document.getElementById('prox-hora').value = document.getElementById('sess-horario')?.value||'09:00';
+  setTimeout(()=>document.getElementById('modal-proxima-consulta').classList.add('show'), 400);
+
+  btn.disabled=false; btn.textContent='Salvar Sessão';
 }
 
 // ── SALVAR AGENDAMENTO (Supabase direto) ──────────────────────────────────────
 async function salvarAgendamento(){
   const pacId=document.getElementById('ag-pac').value;
   if(!pacId){toast('Selecione um paciente','red');return}
+  const dataVal=document.getElementById('ag-data').value;
+  if(!dataVal){toast('Preencha a data','red');return}
   const btn=document.getElementById('btn-salvar-ag');
   btn.disabled=true; btn.textContent='Salvando...';
   try{
+    const horaRaw=(document.getElementById('ag-hora').value||'').trim();
+    const horaFinal = horaRaw.length>=4 ? horaRaw+':00' : '09:00:00';
+    const payload={
+      user_id:user.id,
+      paciente_id:parseInt(pacId),
+      data:dataVal,
+      hora:horaFinal,
+      status:document.getElementById('ag-status').value||'agendado',
+      confirmado:document.getElementById('ag-confirmado').value==='true',
+      link_videochamada:document.getElementById('ag-link').value||null
+    };
     const r=await fetch(`${SB}/rest/v1/${TA}`,{
       method:'POST',
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json','Prefer':'return=representation'},
-      body:JSON.stringify({
-        user_id:user.id,
-        paciente_id:parseInt(pacId),
-        data:document.getElementById('ag-data').value,
-        hora:document.getElementById('ag-hora').value+':00',
-        duracao_min:parseInt(document.getElementById('ag-duracao').value)||50,
-        tipo:document.getElementById('ag-tipo').value||'presencial',
-        status:document.getElementById('ag-status').value,
-        link_videochamada:document.getElementById('ag-link').value||null,
-        observacoes:document.getElementById('ag-obs').value.trim()||null,
-        confirmado:document.getElementById('ag-status').value==='confirmado'
-      })
+      body:JSON.stringify(payload)
     });
-    if(!r.ok) throw new Error('Erro ao salvar');
+    if(!r.ok){
+      const errBody=await r.json().catch(()=>({}));
+      const msg=errBody.message||errBody.details||errBody.hint||errBody.error||`HTTP ${r.status}`;
+      throw new Error(msg);
+    }
     fecharModal('modal-agenda');
     toast('✅ Agendamento criado!');
     await carregarAgenda();
     renderDashboard(); renderAgenda();
-  }catch(e){toast('Erro: '+e.message,'red')}
+  }catch(e){
+    console.error('salvarAgendamento erro:',e);
+    toast('Erro: '+e.message,'red');
+  }
   finally{btn.disabled=false;btn.textContent='Salvar Agendamento'}
 }
 
@@ -1850,7 +2349,7 @@ async function confirmarGerarRelatorio(){
   if(!pac){toast('Selecione um paciente','red');return}
   const periodo=document.getElementById('rel-periodo').value;
   const hoje=new Date();
-  let dataInicio, dataFim=hoje.toISOString().split('T')[0];
+  let dataInicio, dataFim=localDateStr(hoje);
   if(periodo==='custom'){
     dataInicio=document.getElementById('rel-inicio').value;
     dataFim=document.getElementById('rel-fim').value;
@@ -1858,7 +2357,7 @@ async function confirmarGerarRelatorio(){
   } else {
     const mMap={mes:1,trimestre:3,semestre:6,ano:12,tudo:120};
     if(periodo==='tudo'){dataInicio='2000-01-01';}
-    else{const d=new Date(hoje);d.setMonth(d.getMonth()-mMap[periodo]);dataInicio=d.toISOString().split('T')[0];}
+    else{const d=new Date(hoje);d.setMonth(d.getMonth()-mMap[periodo]);dataInicio=localDateStr(d);}
   }
   const btn=document.getElementById('btn-gerar-rel');
   btn.disabled=true; btn.textContent='⏳ Gerando...';
@@ -2011,10 +2510,13 @@ function atualizarPreview(){
   if(prevN) prevN.textContent=nome;
   if(prevC) prevC.textContent=crp;
   if(prevI) prevI.textContent=ini;
-  // Atualiza sidebar também
-  document.getElementById('user-name').textContent=nome;
-  const roleEl=document.getElementById('user-role');
-  if(roleEl && crp) roleEl.textContent=crp;
+  // Atualiza sidebar só se o app estiver visível
+  const userNameEl=document.getElementById('user-name');
+  if(userNameEl && document.getElementById('app')?.style.display!=='none'){
+    userNameEl.textContent=nome;
+    const roleEl=document.getElementById('user-role');
+    if(roleEl && crp) roleEl.textContent=crp;
+  }
 }
 
 async function previewFoto(input){
@@ -2087,10 +2589,11 @@ function setTema(tema){
 function setCorDestaque(cor){
   document.querySelectorAll('.cor-btn').forEach(b=>b.classList.remove('ativa'));
   document.querySelector(`.cor-btn[data-cor="${cor}"]`)?.classList.add('ativa');
-  // Aplica as variáveis CSS
+  // Aplica as variáveis CSS do novo sistema
   document.documentElement.style.setProperty('--p1',cor);
   document.documentElement.style.setProperty('--p2',ajustarCor(cor,-20));
-  document.documentElement.style.setProperty('--p3',ajustarCor(cor,30));
+  document.documentElement.style.setProperty('--p3',ajustarCor(cor,40));
+  document.documentElement.style.setProperty('--border-accent',cor+'66');
   localStorage.setItem('cf_cor',cor);
 }
 
@@ -2246,10 +2749,27 @@ function fmtDate(d){
   return`${day}/${m}/${y}`;
 }
 
+// Retorna "YYYY-MM-DD" no fuso local (evita bug de UTC no Brasil)
+function localDateStr(date){
+  const d = date || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
 function toast(msg,tipo='green'){
   const t=document.getElementById('toast');
   t.textContent=msg;
-  t.style.background=tipo==='red'?'#ef4444':tipo==='orange'?'#f59e0b':'#22c55e';
+  const cores={
+    green:{bg:'#059669',shadow:'rgba(16,185,129,.4)'},
+    red:{bg:'#dc2626',shadow:'rgba(239,68,68,.4)'},
+    orange:{bg:'#d97706',shadow:'rgba(245,158,11,.4)'},
+    blue:{bg:'#2563eb',shadow:'rgba(37,99,235,.4)'},
+  };
+  const c=cores[tipo]||cores.green;
+  t.style.background=c.bg;
+  t.style.boxShadow=`0 8px 24px ${c.shadow}`;
   t.classList.add('show');
   clearTimeout(window._toastTimer);
   window._toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
