@@ -1493,7 +1493,7 @@ function renderSessoes(){
     grupos[pid].push(s);
   });
 
-  let html = '';
+  let html = '<div style="display:flex;flex-direction:column;gap:10px">';
   Object.keys(grupos).forEach(pid=>{
     const p = pacientes.find(x=>x.id==pid);
     const ss = grupos[pid];
@@ -1501,78 +1501,100 @@ function renderSessoes(){
     const totalValor = ss.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
     const totalPago = ss.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
     const totalPendente = totalValor - totalPago;
-    const ultimaSessao = ss[0]; // já vem ordenado desc
+    const ultimaSessao = ss[0];
+    const temPendente = totalPendente > 0;
+
+    // Linhas da tabela colapsada (ocultas por padrão)
+    const linhasSessoes = ss.map(s=>{
+      const isHoje=s.data_sessao===hoje;
+      let hrExib='—';
+      if(s.horario&&s.horario.length>=5) hrExib=s.horario.substring(0,5);
+      else{ const ag=agenda.find(a=>a.paciente_id==s.paciente_id&&a.data===s.data_sessao); if(ag?.hora) hrExib=ag.hora.substring(0,5); }
+      const numSess=s.numero_sessao||s._seq||'—';
+      return`<tr class="row-clickable${isHoje?' row-hoje':''}" onclick="abrirDetalheSession(${s.id})">
+        <td style="padding:10px 14px"><strong>${fmtDate(s.data_sessao)}</strong>${isHoje?'<span class="badge badge-purple" style="margin-left:6px;font-size:9px">Hoje</span>':''}</td>
+        <td style="padding:10px 14px;font-family:monospace;font-size:12px">${hrExib}</td>
+        <td style="padding:10px 14px"><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
+        <td style="padding:10px 14px"><span class="badge badge-gray">${numSess}</span></td>
+        <td style="padding:10px 14px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:12px">${s.queixas_principais||'—'}</td>
+        <td style="padding:10px 14px"><strong style="color:${(parseFloat(s.valor)||0)>0?'var(--accent)':'var(--text3)'}">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
+        <td style="padding:10px 14px"><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></td>
+        <td style="padding:10px 14px" onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
+          <button class="btn-sm" onclick="abrirEditarSessao(${s.id})" title="Editar">✏️</button>
+          <button class="btn-danger" onclick="excluirSessaoDireto(${s.id})" title="Excluir">🗑️</button>
+        </div></td>
+      </tr>`;
+    }).join('');
 
     html += `
-      <div style="margin-bottom:24px">
-        <!-- Cabeçalho do paciente -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px 12px 0 0;cursor:pointer" onclick="abrirDetalhePaciente(${pid})">
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">${(p?.nome||'?')[0].toUpperCase()}</div>
+      <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--card)">
+        <!-- CARD DO PACIENTE — clicável para expandir -->
+        <div class="row-clickable" onclick="toggleSessoesPaciente(${pid})"
+          style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(124,58,237,.06);border-bottom:1px solid transparent;transition:.2s"
+          id="card-pac-${pid}">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">${(p?.nome||'?')[0].toUpperCase()}</div>
             <div>
               <div style="font-weight:800;font-size:14px">${p?.nome||'Paciente #'+pid}</div>
-              <div style="font-size:11px;color:var(--text3);margin-top:1px">Última sessão: ${fmtDate(ultimaSessao?.data_sessao)} · ${total} ${total===1?'sessão':'sessões'} no total</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">
+                Última sessão: <strong>${fmtDate(ultimaSessao?.data_sessao)}</strong>
+                &nbsp;·&nbsp; <strong>${total}</strong> ${total===1?'sessão':'sessões'}
+                ${p?.telefone?`&nbsp;·&nbsp; ${p.telefone}`:''}
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:16px;align-items:center">
-            <div style="text-align:right">
-              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Total</div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">R$ ${totalValor.toFixed(2)}</div>
+          <div style="display:flex;gap:18px;align-items:center">
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:2px">Total</div>
+              <div style="font-size:13px;font-weight:800">R$ ${totalValor.toFixed(2)}</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Pago</div>
-              <div style="font-size:14px;font-weight:800;color:var(--accent)">R$ ${totalPago.toFixed(2)}</div>
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:2px">Pago</div>
+              <div style="font-size:13px;font-weight:800;color:var(--accent)">R$ ${totalPago.toFixed(2)}</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700">Pendente</div>
-              <div style="font-size:14px;font-weight:800;color:${totalPendente>0?'var(--warn)':'var(--text3)'}">R$ ${totalPendente.toFixed(2)}</div>
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:2px">Pendente</div>
+              <div style="font-size:13px;font-weight:800;color:${temPendente?'var(--warn)':'var(--text3)'}">R$ ${totalPendente.toFixed(2)}</div>
             </div>
+            <div style="display:flex;gap:6px;align-items:center" onclick="event.stopPropagation()">
+              <button class="btn-sm" onclick="abrirDetalhePaciente(${pid})" title="Ver prontuário">👤</button>
+            </div>
+            <div id="seta-${pid}" style="color:var(--text3);font-size:14px;transition:.3s;margin-left:4px">▼</div>
           </div>
         </div>
-        <!-- Tabela de sessões do paciente -->
-        <div style="border:1px solid rgba(124,58,237,.15);border-top:none;border-radius:0 0 12px 12px;overflow:hidden">
+        <!-- TABELA COLAPSADA — oculta por padrão -->
+        <div id="sessoes-pac-${pid}" style="display:none">
           <table style="width:100%;border-collapse:collapse">
             <thead>
               <tr style="background:rgba(255,255,255,.02)">
-                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Data</th>
-                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Horário</th>
-                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Tipo</th>
-                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Nº</th>
-                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Queixas</th>
-                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Valor</th>
-                <th style="text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;border-bottom:1px solid var(--border)">Pgto</th>
-                <th style="padding:8px 12px;border-bottom:1px solid var(--border)"></th>
+                <th style="text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 14px;border-bottom:1px solid var(--border)">Data</th>
+                <th style="text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 14px;border-bottom:1px solid var(--border)">Horário</th>
+                <th style="text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 14px;border-bottom:1px solid var(--border)">Tipo</th>
+                <th style="text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 14px;border-bottom:1px solid var(--border)">Nº</th>
+                <th style="text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 14px;border-bottom:1px solid var(--border)">Queixas</th>
+                <th style="text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 14px;border-bottom:1px solid var(--border)">Valor</th>
+                <th style="text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 14px;border-bottom:1px solid var(--border)">Pgto</th>
+                <th style="padding:8px 14px;border-bottom:1px solid var(--border)"></th>
               </tr>
             </thead>
-            <tbody>
-              ${ss.map(s=>{
-                const isHoje=s.data_sessao===hoje;
-                let hrExib='—';
-                if(s.horario&&s.horario.length>=5) hrExib=s.horario.substring(0,5);
-                else{ const ag=agenda.find(a=>a.paciente_id==s.paciente_id&&a.data===s.data_sessao); if(ag?.hora) hrExib=ag.hora.substring(0,5); }
-                const numSess=s.numero_sessao||s._seq||'—';
-                return`<tr class="row-clickable${isHoje?' row-hoje':''}" style="border-bottom:1px solid var(--border)" onclick="abrirDetalheSession(${s.id})">
-                  <td style="padding:10px 12px"><strong>${fmtDate(s.data_sessao)}</strong>${isHoje?'<span class="badge badge-purple" style="margin-left:6px;font-size:9px">Hoje</span>':''}</td>
-                  <td style="padding:10px 12px;font-family:monospace;font-size:13px">${hrExib}</td>
-                  <td style="padding:10px 12px"><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
-                  <td style="padding:10px 12px"><span class="badge badge-gray">${numSess}</span></td>
-                  <td style="padding:10px 12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:12px">${s.queixas_principais||'—'}</td>
-                  <td style="padding:10px 12px"><strong style="color:${(parseFloat(s.valor)||0)>0?'var(--accent)':'var(--text3)'}">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
-                  <td style="padding:10px 12px"><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></td>
-                  <td style="padding:10px 12px" onclick="event.stopPropagation()">
-                    <div style="display:flex;gap:4px">
-                      <button class="btn-sm" onclick="abrirEditarSessao(${s.id})" title="Editar">✏️</button>
-                      <button class="btn-danger" onclick="excluirSessaoDireto(${s.id})" title="Excluir">🗑️</button>
-                    </div>
-                  </td>
-                </tr>`;
-              }).join('')}
-            </tbody>
+            <tbody>${linhasSessoes}</tbody>
           </table>
         </div>
       </div>`;
   });
+  html += '</div>';
   div.innerHTML = html || '<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';
+}
+
+function toggleSessoesPaciente(pid){
+  const el = document.getElementById(`sessoes-pac-${pid}`);
+  const seta = document.getElementById(`seta-${pid}`);
+  const card = document.getElementById(`card-pac-${pid}`);
+  if(!el) return;
+  const aberto = el.style.display !== 'none';
+  el.style.display = aberto ? 'none' : 'block';
+  if(seta) seta.style.transform = aberto ? '' : 'rotate(180deg)';
+  if(card) card.style.borderBottomColor = aberto ? 'transparent' : 'var(--border)';
 }
 
 // ── AGENDA SEMANAL ────────────────────────────────────────────────────────────
@@ -2489,15 +2511,16 @@ async function confirmarGerarRelatorio(){
     // Busca dados do profissional direto do banco para evitar erro de coluna no N8N
     let profDB = {};
     try{
-      const rProf = await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,registro_profissional,nome_clinica`,{
+      const rProf = await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,nome_profissional,registro,nome_clinica,valor_sessao_padrao`,{
         headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
       });
       if(rProf.ok){ const dp=await rProf.json(); if(dp[0]) profDB=dp[0]; }
     }catch(e){}
 
-    const nomeProfissional = profDB.nome_completo || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
-    const registroProfissional = profDB.registro_profissional || cfgProf.registro || user.user_metadata?.crp || '';
+    const nomeProfissional = profDB.nome_completo || profDB.nome_profissional || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
+    const registroProfissional = profDB.registro || cfgProf.registro || user.user_metadata?.crp || '';
     const nomeClinica = profDB.nome_clinica || cfgProf.nome_clinica || 'CatherFlow';
+    const valorSessaoDB = profDB.valor_sessao_padrao || cfgSisObj.valor || '';
     const cfgSisObj = {};
     try{ Object.assign(cfgSisObj, JSON.parse(localStorage.getItem('cf_sistema')||'{}')); }catch(e){}
 
@@ -2511,7 +2534,7 @@ async function confirmarGerarRelatorio(){
       nome_profissional: nomeProfissional,
       registro_profissional: registroProfissional,
       nome_clinica: nomeClinica,
-      valor_sessao_padrao: cfgSisObj.valor || ''
+      valor_sessao_padrao: valorSessaoDB
     });
     if(!d.success) throw new Error(d.mensagem||'Erro ao gerar relatório');
     const s=d.secoes||{};
@@ -2835,7 +2858,7 @@ async function previewFoto(input){
         'apikey':SK,'Authorization':`Bearer ${token}`,
         'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'
       },
-      body:JSON.stringify({user_id:user.id, avatar_url:publicUrl})
+      body:JSON.stringify({id:user.id, avatar_url:publicUrl})
     });
 
     localStorage.setItem('cf_foto',publicUrl);
@@ -2899,7 +2922,8 @@ async function salvarConfig(){
   localStorage.setItem('cf_config', JSON.stringify(cfgLocal));
 
   // Monta body para Supabase — usa id = auth.uid() como PK
-  const body = { id:user.id, nome_completo:nome, registro_profissional:registro, nome_clinica:clinica, tipo_profissional:tipo, bio, endereco, whatsapp, instagram, site };
+  const cfg_valor = document.getElementById('cfg-valor')?.value||'';
+  const body = { id:user.id, nome_completo:nome, nome_profissional:nome, registro, nome_clinica:clinica, valor_sessao_padrao:cfg_valor||null };
   if(foto) body.avatar_url = foto;
 
   try{
@@ -2987,7 +3011,7 @@ function carregarConfiguracoesSalvas(){
 async function carregarFotoDoSupabase(){
   try{
     // Busca URL da foto salva no perfil do usuário
-    const r=await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,registro_profissional,avatar_url,nome_clinica,tipo_profissional,bio,endereco,whatsapp,instagram,site`,{
+    const r=await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,nome_profissional,registro,nome_clinica,valor_sessao_padrao,avatar_url`,{
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
     });
     if(!r.ok){ console.warn('t2_usuarios fetch failed:', r.status); return; }
@@ -2998,17 +3022,12 @@ async function carregarFotoDoSupabase(){
       if(u.avatar_url){ localStorage.setItem('cf_foto',u.avatar_url); aplicarFoto(u.avatar_url); }
       // Preenche campos de config com dados do banco (sobrescreve localStorage)
       const setEl=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&v!=='')el.value=v;};
-      setEl('cfg-nome', u.nome_completo);
-      setEl('cfg-registro', u.registro_profissional);
+      setEl('cfg-nome', u.nome_completo||u.nome_profissional);
+      setEl('cfg-registro', u.registro);
       setEl('cfg-clinica', u.nome_clinica);
-      setEl('cfg-tipo', u.tipo_profissional);
-      setEl('cfg-bio', u.bio);
-      setEl('cfg-endereco', u.endereco);
-      setEl('cfg-whatsapp', u.whatsapp);
-      setEl('cfg-instagram', u.instagram);
-      setEl('cfg-site', u.site);
+      setEl('cfg-valor', u.valor_sessao_padrao);
       // Salva no localStorage também
-      const cfgLocal={nome_clinica:u.nome_clinica,nome_profissional:u.nome_completo,registro:u.registro_profissional,tipo_profissional:u.tipo_profissional,bio:u.bio,endereco:u.endereco,whatsapp:u.whatsapp,instagram:u.instagram,site:u.site};
+      const cfgLocal={nome_clinica:u.nome_clinica,nome_profissional:u.nome_completo||u.nome_profissional,registro:u.registro,valor:u.valor_sessao_padrao};
       localStorage.setItem('cf_config',JSON.stringify(cfgLocal));
       atualizarPreview();
     }
