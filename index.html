@@ -806,34 +806,115 @@ body.light thead th{background:var(--bg3)}
 
     <!-- ── RELATÓRIOS ─────────────────────────────────────── -->
     <div id="page-relatorios" class="page">
-      <div class="page-header">
+
+      <!-- ── PRODUTIVIDADE (sempre visível no topo) ── -->
+      <div class="page-header" style="margin-bottom:16px">
         <h1>Relatórios</h1>
+        <div class="hactions">
+          <button class="btn-primary" onclick="gerarPDFProdutividade()" style="background:var(--accent);box-shadow:0 2px 8px rgba(16,185,129,.35)">
+            📊 PDF Produtividade
+          </button>
+        </div>
       </div>
 
-      <!-- Vista padrão: cards de pacientes com sessões -->
-      <div id="rel-view-pacientes">
-        <div style="margin-bottom:14px">
-          <input type="text" id="rel-busca-pac" placeholder="🔍 Buscar paciente..." oninput="renderCardsPacientesRel()"
-            style="width:100%;max-width:320px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:14px 'Sora';outline:none">
+      <!-- Cards de produtividade -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+        <div class="kpi-card" style="background:linear-gradient(135deg,rgba(16,185,129,.1),var(--card))">
+          <div class="kpi-label">📅 Esta Semana</div>
+          <div class="kpi-value" id="prod-semana-pac" style="font-size:28px">0</div>
+          <div class="kpi-sub" id="prod-semana-sess">0 sessões</div>
         </div>
-        <div id="rel-cards-pacientes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
+        <div class="kpi-card" style="background:linear-gradient(135deg,rgba(37,99,235,.1),var(--card))">
+          <div class="kpi-label">📆 Este Mês</div>
+          <div class="kpi-value" id="prod-mes-pac" style="font-size:28px">0</div>
+          <div class="kpi-sub" id="prod-mes-sess">0 sessões</div>
+        </div>
+        <div class="kpi-card" style="background:linear-gradient(135deg,rgba(245,158,11,.1),var(--card))">
+          <div class="kpi-label">💰 Faturado Mês</div>
+          <div class="kpi-value" style="font-size:22px">R$<span id="prod-fat-mes">0</span></div>
+          <div class="kpi-sub up" id="prod-fat-pago">R$ 0 recebido</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">⭐ Mais Atendido</div>
+          <div id="prod-top-pac" style="font-size:13px;font-weight:700;color:var(--text);margin-top:8px">—</div>
+          <div id="prod-top-count" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+        </div>
       </div>
 
-      <!-- Vista: relatório gerado / histórico -->
-      <div id="rel-view-relatorio" style="display:none">
-        <div style="margin-bottom:16px">
-          <button onclick="voltarParaCardsPacientes()" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;color:var(--text2);font:600 13px 'Sora';cursor:pointer">← Voltar</button>
+      <!-- Divisor -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <div style="font-size:14px;font-weight:800;color:var(--text)">📄 Relatório Clínico por Paciente</div>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
+      <!-- ── SELETOR DE PACIENTE ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;flex-wrap:wrap" id="rel-controles">
+        <div class="field" style="margin:0">
+          <label>Paciente</label>
+          <select id="rel-pac-sel" onchange="carregarSessoesParaRelatorio()" style="width:100%">
+            <option value="">Selecione um paciente...</option>
+          </select>
         </div>
-        <div id="area-relatorio"></div>
+        <div class="field" style="margin:0">
+          <label>Filtrar por período</label>
+          <select id="rel-periodo-sel" onchange="filtrarSessoesRelatorio()" style="width:100%">
+            <option value="tudo">Todo o histórico</option>
+            <option value="semana">Esta semana</option>
+            <option value="mes" selected>Este mês</option>
+            <option value="trimestre">Últimos 3 meses</option>
+            <option value="semestre">Últimos 6 meses</option>
+            <option value="ano">Último ano</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Período personalizado -->
+      <div id="rel-custom-datas" style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div class="field" style="margin:0">
+          <label>Data início</label>
+          <input type="date" id="rel-data-ini" onchange="filtrarSessoesRelatorio()">
+        </div>
+        <div class="field" style="margin:0">
+          <label>Data fim</label>
+          <input type="date" id="rel-data-fim" onchange="filtrarSessoesRelatorio()">
+        </div>
+      </div>
+
+      <!-- Barra flutuante de seleção (aparece quando há sessões marcadas) -->
+      <div id="rel-barra-sel" style="display:none;position:sticky;top:12px;z-index:50;margin-bottom:16px;padding:14px 20px;background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:12px;box-shadow:0 4px 20px rgba(37,99,235,.4);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:20px">📋</span>
+          <div>
+            <div id="rel-barra-count" style="font-size:14px;font-weight:800;color:#fff">0 sessões selecionadas</div>
+            <div id="rel-barra-valor" style="font-size:12px;color:rgba(255,255,255,.75)">R$ 0,00 no período</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="selecionarTodasSessoes()" style="padding:8px 14px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;color:#fff;font:600 12px 'Sora';cursor:pointer;transition:.18s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">✓ Todas</button>
+          <button onclick="deselecionarTodasSessoes()" style="padding:8px 14px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;color:#fff;font:600 12px 'Sora';cursor:pointer;transition:.18s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">✗ Nenhuma</button>
+          <button onclick="gerarRelatorioSelecionadas()" style="padding:8px 18px;background:#fff;border:none;border-radius:8px;color:var(--p2);font:700 13px 'Sora';cursor:pointer;transition:.18s;box-shadow:0 2px 8px rgba(0,0,0,.2)">
+            🤖 Gerar Relatório IA
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de sessões com checkboxes -->
+      <div id="rel-sessoes-lista-sel" style="margin-bottom:24px">
+        <div class="empty" style="padding:40px 20px">
+          <span class="empty-icon">👆</span>
+          <p>Selecione um paciente para ver as sessões</p>
+        </div>
       </div>
 
       <!-- Histórico de relatórios gerados -->
-      <div class="card" style="margin-top:18px">
-        <div class="card-title" style="justify-content:space-between">
-          <span>📋 Relatórios Gerados</span>
-          <button class="btn-sm" onclick="carregarRelatorios()">↻ Atualizar</button>
-        </div>
-        <div id="lista-relatorios"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;margin-top:8px">
+        <div style="font-size:14px;font-weight:800;color:var(--text)">📚 Relatórios Gerados</div>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <button class="btn-sm" onclick="carregarRelatorios()">↻ Atualizar</button>
+      </div>
+      <div id="lista-relatorios">
+        <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
       </div>
     </div>
 
@@ -1437,6 +1518,204 @@ document.addEventListener('keydown',e=>{
     confirmarFechar();
 });
 
+// ── RELATÓRIOS: NOVO FLUXO ───────────────────────────────────────────────────
+let _sessoesRelatorio=[], _sessSelecionadas=new Set();
+
+function iniciarPaginaRelatorios(){
+  const sel=document.getElementById('rel-pac-sel');
+  if(!sel) return;
+  const pacsComSessao=pacientes.filter(p=>sessoes.some(s=>s.paciente_id==p.id));
+  sel.innerHTML='<option value="">Selecione um paciente...</option>'+
+    pacsComSessao.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  renderProdutividade();
+}
+
+function renderProdutividade(){
+  const hoje=new Date();
+  const ini=new Date(hoje); ini.setDate(hoje.getDate()-hoje.getDay());
+  const iniSem=localDateStr(ini);
+  const mesStr=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const sessSem=sessoes.filter(s=>s.data_sessao>=iniSem&&s.data_sessao<=localDateStr(hoje));
+  const sessMes=sessoes.filter(s=>s.data_sessao?.startsWith(mesStr));
+  const pacsSem=new Set(sessSem.map(s=>s.paciente_id)).size;
+  const pacsMes=new Set(sessMes.map(s=>s.paciente_id)).size;
+  const fatMes=sessMes.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const pagoMes=sessMes.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const contagem={};
+  sessMes.forEach(s=>{contagem[s.paciente_id]=(contagem[s.paciente_id]||0)+1;});
+  const topId=Object.keys(contagem).sort((a,b)=>contagem[b]-contagem[a])[0];
+  const topPac=topId?pacientes.find(p=>p.id==topId):null;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('prod-semana-pac',pacsSem);
+  set('prod-semana-sess',sessSem.length+' sessões');
+  set('prod-mes-pac',pacsMes);
+  set('prod-mes-sess',sessMes.length+' sessões');
+  set('prod-fat-mes',fatMes.toFixed(0));
+  set('prod-fat-pago','R$ '+pagoMes.toFixed(2)+' recebido');
+  set('prod-top-pac',topPac?.nome||'—');
+  set('prod-top-count',topId?contagem[topId]+' sessões este mês':'');
+}
+
+function carregarSessoesParaRelatorio(){
+  const pacId=document.getElementById('rel-pac-sel')?.value;
+  _sessSelecionadas.clear();
+  if(!pacId){
+    document.getElementById('rel-sessoes-lista-sel').innerHTML=
+      '<div class="empty"><span class="empty-icon">👆</span><p>Selecione um paciente</p></div>';
+    atualizarBarraSel(); return;
+  }
+  filtrarSessoesRelatorio();
+}
+
+function filtrarSessoesRelatorio(){
+  const pacId=document.getElementById('rel-pac-sel')?.value;
+  const periodo=document.getElementById('rel-periodo-sel')?.value||'mes';
+  const customDiv=document.getElementById('rel-custom-datas');
+  if(periodo==='custom'){ if(customDiv) customDiv.style.display='grid'; }
+  else{ if(customDiv) customDiv.style.display='none'; }
+  if(!pacId) return;
+  const hoje=new Date();
+  let iniStr='2000-01-01';
+  const fimStr=localDateStr(hoje);
+  if(periodo==='semana'){ const d=new Date(hoje);d.setDate(hoje.getDate()-7);iniStr=localDateStr(d); }
+  else if(periodo==='mes'){ const d=new Date(hoje);d.setMonth(hoje.getMonth()-1);iniStr=localDateStr(d); }
+  else if(periodo==='trimestre'){ const d=new Date(hoje);d.setMonth(hoje.getMonth()-3);iniStr=localDateStr(d); }
+  else if(periodo==='semestre'){ const d=new Date(hoje);d.setMonth(hoje.getMonth()-6);iniStr=localDateStr(d); }
+  else if(periodo==='ano'){ const d=new Date(hoje);d.setFullYear(hoje.getFullYear()-1);iniStr=localDateStr(d); }
+  else if(periodo==='custom'){
+    iniStr=document.getElementById('rel-data-ini')?.value||'2000-01-01';
+    const fimC=document.getElementById('rel-data-fim')?.value;
+    _sessoesRelatorio=sessoes.filter(s=>s.paciente_id==pacId&&s.data_sessao>=iniStr&&(!fimC||s.data_sessao<=fimC))
+      .sort((a,b)=>b.data_sessao.localeCompare(a.data_sessao));
+    _sessSelecionadas=new Set(_sessoesRelatorio.map(s=>s.id));
+    renderCheckboxSessoes(); return;
+  }
+  _sessoesRelatorio=sessoes.filter(s=>s.paciente_id==pacId&&s.data_sessao>=iniStr&&s.data_sessao<=fimStr)
+    .sort((a,b)=>b.data_sessao.localeCompare(a.data_sessao));
+  _sessSelecionadas=new Set(_sessoesRelatorio.map(s=>s.id));
+  renderCheckboxSessoes();
+  atualizarBarraSel();
+}
+
+function renderCheckboxSessoes(){
+  const div=document.getElementById('rel-sessoes-lista-sel');
+  if(!_sessoesRelatorio.length){
+    div.innerHTML='<div class="empty"><span class="empty-icon">📭</span><p>Nenhuma sessão neste período</p></div>';
+    atualizarBarraSel(); return;
+  }
+  div.innerHTML=_sessoesRelatorio.map(s=>{
+    const sel=_sessSelecionadas.has(s.id);
+    return `<div id="rel-card-${s.id}" onclick="toggleSessaoRel(${s.id})" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:12px;border:2px solid ${sel?'var(--p1)':'var(--border)'};background:${sel?'rgba(37,99,235,.06)':'var(--card)'};margin-bottom:8px;cursor:pointer;transition:all .2s">
+      <div id="chk-${s.id}" style="width:22px;height:22px;border-radius:6px;flex-shrink:0;margin-top:2px;border:2px solid ${sel?'var(--p1)':'var(--border)'};background:${sel?'var(--p1)':'transparent'};display:flex;align-items:center;justify-content:center;transition:all .2s">${sel?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>':''}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${fmtDate(s.data_sessao)}</span>
+          <span style="font-size:11px;color:var(--text3)">${s.horario?.substring(0,5)||'—'}</span>
+          <span class="badge badge-gray" style="font-size:10px">Sessão ${s.numero_sessao||'—'}</span>
+          <span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}" style="font-size:10px">${s.tipo_sessao||'presencial'}</span>
+        </div>
+        ${s.queixas_principais?`<div style="font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:500px">${s.queixas_principais}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:13px;font-weight:700">${(parseFloat(s.valor)||0)>0?'R$ '+(parseFloat(s.valor)).toFixed(2):'—'}</div>
+        <span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}" style="font-size:10px;margin-top:4px">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span>
+      </div>
+    </div>`;
+  }).join('');
+  atualizarBarraSel();
+}
+
+function toggleSessaoRel(id){
+  if(_sessSelecionadas.has(id)) _sessSelecionadas.delete(id);
+  else _sessSelecionadas.add(id);
+  const sel=_sessSelecionadas.has(id);
+  const card=document.getElementById(`rel-card-${id}`);
+  const chk=document.getElementById(`chk-${id}`);
+  if(card){ card.style.borderColor=sel?'var(--p1)':'var(--border)'; card.style.background=sel?'rgba(37,99,235,.06)':'var(--card)'; }
+  if(chk){ chk.style.borderColor=sel?'var(--p1)':'var(--border)'; chk.style.background=sel?'var(--p1)':'transparent';
+    chk.innerHTML=sel?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>':''; }
+  atualizarBarraSel();
+}
+
+function selecionarTodasSessoes(){ _sessoesRelatorio.forEach(s=>_sessSelecionadas.add(s.id)); renderCheckboxSessoes(); }
+function deselecionarTodasSessoes(){ _sessSelecionadas.clear(); renderCheckboxSessoes(); }
+
+function atualizarBarraSel(){
+  const barra=document.getElementById('rel-barra-sel');
+  if(!barra) return;
+  const n=_sessSelecionadas.size;
+  const total=_sessoesRelatorio.filter(s=>_sessSelecionadas.has(s.id)).reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  if(n===0||!document.getElementById('rel-pac-sel')?.value){ barra.style.display='none'; return; }
+  barra.style.display='flex';
+  document.getElementById('rel-barra-count').textContent=`${n} sessão${n!==1?'ões':''} selecionada${n!==1?'s':''}`;
+  document.getElementById('rel-barra-valor').textContent=`R$ ${total.toFixed(2)} no período`;
+}
+
+async function gerarRelatorioSelecionadas(){
+  const pacId=document.getElementById('rel-pac-sel')?.value;
+  if(!pacId){ toast('Selecione um paciente','orange'); return; }
+  if(_sessSelecionadas.size===0){ toast('Selecione pelo menos uma sessão','orange'); return; }
+  const permissao=podeGerarRelatorio();
+  if(!permissao.pode){ toast(permissao.motivo,'red'); return; }
+  const pac=pacientes.find(p=>String(p.id)===String(pacId));
+  const sessSel=_sessoesRelatorio.filter(s=>_sessSelecionadas.has(s.id)).sort((a,b)=>a.data_sessao.localeCompare(b.data_sessao));
+  const dataInicio=sessSel[0]?.data_sessao||localDateStr();
+  const dataFim=sessSel[sessSel.length-1]?.data_sessao||localDateStr();
+  document.getElementById('lista-relatorios').innerHTML='<div class="loading"><div class="spinner"></div><p>🤖 IA analisando sessões selecionadas... ~15s</p></div>';
+  let cfgProf={}; try{cfgProf=JSON.parse(localStorage.getItem('cf_config')||'{}');}catch(e){}
+  const profDB=usuarioDB||{};
+  try{
+    const d=await whFetch(WH.relatorio,{
+      user_id:user.id, paciente_id:pac.id, tipo:'acompanhamento',
+      data_inicio:dataInicio, data_fim:dataFim, sessoes_ids:sessSel.map(s=>s.id),
+      nome_profissional:profDB.nome_completo||profDB.nome_profissional||cfgProf.nome_profissional||user?.email||'',
+      registro_profissional:profDB.registro||cfgProf.registro||'',
+      nome_clinica:profDB.nome_clinica||cfgProf.nome_clinica||'CatherFlow',
+    });
+    if(!d.success) throw new Error(d.mensagem||'Erro ao gerar relatório');
+    await incrementarContadorRelatorio();
+    toast('✅ Relatório gerado com sucesso!');
+    await carregarRelatorios();
+  }catch(e){ toast('Erro: '+e.message,'red'); await carregarRelatorios(); }
+}
+
+function gerarPDFProdutividade(){
+  const hoje=new Date();
+  const iniSem=new Date(hoje); iniSem.setDate(hoje.getDate()-hoje.getDay());
+  const mesStr=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const sessMes=sessoes.filter(s=>s.data_sessao?.startsWith(mesStr));
+  const sessSem=sessoes.filter(s=>s.data_sessao>=localDateStr(iniSem));
+  const dias30=[];
+  for(let i=29;i>=0;i--){const d=new Date(hoje);d.setDate(hoje.getDate()-i);const str=localDateStr(d);dias30.push({data:str,label:d.getDate()+'/'+String(d.getMonth()+1).padStart(2,'0'),count:sessoes.filter(s=>s.data_sessao===str).length});}
+  const fatMes=sessMes.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const pagoMes=sessMes.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const pacsMes=[...new Set(sessMes.map(s=>s.paciente_id))];
+  let cfgProf={}; try{cfgProf=JSON.parse(localStorage.getItem('cf_config')||'{}');}catch(e){}
+  const profDB=usuarioDB||{};
+  const profNome=profDB.nome_completo||cfgProf.nome_profissional||user?.email||'';
+  const crp=profDB.registro||cfgProf.registro||'';
+  const nomeClinica=profDB.nome_clinica||cfgProf.nome_clinica||'CatherFlow';
+  const dataGeracao=hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const mesLabel=hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const contagem={}; sessMes.forEach(s=>{contagem[s.paciente_id]=(contagem[s.paciente_id]||0)+1;});
+  const ranking=Object.keys(contagem).sort((a,b)=>contagem[b]-contagem[a]).slice(0,5).map(id=>({pac:pacientes.find(p=>p.id==id),n:contagem[id]}));
+  const maxC=Math.max(...dias30.map(d=>d.count),1);
+  const bW=14,bG=3,cH=80,svgW=dias30.length*(bW+bG);
+  const barsSVG=dias30.map((d,i)=>{const h=Math.round((d.count/maxC)*cH);const x=i*(bW+bG);const y=cH-h;return `<rect x="${x}" y="${y}" width="${bW}" height="${h||2}" rx="3" fill="${d.count>0?'#7c3aed':'#e2e8f0'}" opacity="0.85"/>${d.count>0?`<text x="${x+bW/2}" y="${y-3}" text-anchor="middle" font-size="8" fill="#64748b">${d.count}</text>`:''}`; }).join('');
+  const labSVG=dias30.filter((_,i)=>i%5===0||i===dias30.length-1).map((d)=>{const i=dias30.indexOf(d);return `<text x="${i*(bW+bG)+bW/2}" y="${cH+14}" text-anchor="middle" font-size="7" fill="#94a3b8">${d.label}</text>`;}).join('');
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Produtividade — ${mesLabel}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:11px;line-height:1.6}.hdr{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center}.hdr-logo{font-size:22px;font-weight:900}.hdr-sub{font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-top:2px}.hdr-r{text-align:right;font-size:10px;opacity:.8;line-height:1.8}.sec{padding:18px 36px;border-bottom:1px solid #f1f5f9}.sec-t{font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}.sec-t::after{content:'';flex:1;height:1px;background:#ede9fe}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{background:#faf5ff;border:1px solid #ede9fe;border-radius:10px;padding:12px;text-align:center}.kpi-v{font-size:24px;font-weight:900;color:#6d28d9;line-height:1}.kpi-l{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-top:4px}.chart{background:#fafafa;border:1px solid #f1f5f9;border-radius:10px;padding:14px}.chart-t{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}.fg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.fi{background:#fafafa;border:1px solid #f1f5f9;border-radius:8px;padding:12px}.fi-l{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.fi-v{font-size:15px;font-weight:800}.ri{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:#faf5ff}.ftr{border-top:2px solid #7c3aed;padding:14px 36px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafafa}.al{border-top:1px solid #94a3b8;padding-top:6px;margin-top:28px;min-width:160px}.fi-info{text-align:right;font-size:9px;color:#94a3b8;line-height:1.8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+  <div class="hdr"><div><div class="hdr-logo">${nomeClinica}</div><div class="hdr-sub">Relatório de Produtividade Clínica</div></div><div class="hdr-r"><div>${mesLabel}</div>${profNome?`<div>${profNome}</div>`:''} ${crp?`<div>${crp}</div>`:''}<div>Gerado em ${dataGeracao}</div></div></div>
+  <div class="sec"><div class="sec-t">📊 Resumo do Mês</div><div class="kpis"><div class="kpi"><div class="kpi-v">${sessMes.length}</div><div class="kpi-l">Sessões realizadas</div></div><div class="kpi"><div class="kpi-v">${pacsMes.length}</div><div class="kpi-l">Pacientes atendidos</div></div><div class="kpi"><div class="kpi-v">${sessSem.length}</div><div class="kpi-l">Sessões esta semana</div></div><div class="kpi"><div class="kpi-v">${sessMes.length>0?(sessMes.length/4.3).toFixed(1):0}</div><div class="kpi-l">Média semanal</div></div></div></div>
+  <div class="sec"><div class="sec-t">📈 Evolução (últimos 30 dias)</div><div class="chart"><div class="chart-t">Atendimentos por dia</div><svg width="${svgW}" height="${cH+20}" viewBox="0 0 ${svgW} ${cH+20}" style="width:100%;overflow:visible">${barsSVG}${labSVG}</svg></div></div>
+  <div class="sec"><div class="sec-t">💰 Financeiro do Mês</div><div class="fg"><div class="fi"><div class="fi-l">Total faturado</div><div class="fi-v" style="color:#6d28d9">R$ ${fatMes.toFixed(2)}</div></div><div class="fi"><div class="fi-l">Recebido</div><div class="fi-v" style="color:#059669">R$ ${pagoMes.toFixed(2)}</div></div><div class="fi"><div class="fi-l">Pendente</div><div class="fi-v" style="color:${fatMes-pagoMes>0?'#d97706':'#94a3b8'}">R$ ${(fatMes-pagoMes).toFixed(2)}</div></div></div></div>
+  ${ranking.length?`<div class="sec"><div class="sec-t">🏆 Top Pacientes do Mês</div>${ranking.map((r,i)=>`<div class="ri"><span style="font-size:10px;font-weight:800;color:#7c3aed;width:18px">#${i+1}</span><span style="flex:1;font-size:11px;font-weight:600">${r.pac?.nome||'—'}</span><div style="width:100px;height:6px;background:#ede9fe;border-radius:3px;overflow:hidden"><div style="width:${Math.round((r.n/ranking[0].n)*100)}%;height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:3px"></div></div><span style="font-size:10px;font-weight:700;color:#64748b;width:28px;text-align:right">${r.n}x</span></div>`).join('')}</div>`:''}
+  <div class="ftr"><div><div class="al"><div style="font-size:11px;font-weight:700">${profNome}</div>${crp?`<div style="font-size:10px;color:#64748b">${crp}</div>`:''}</div></div><div class="fi-info"><div>${nomeClinica}</div><div>${dataGeracao}</div><div style="font-size:8px;color:#cbd5e1;margin-top:2px">Documento confidencial</div></div></div>
+  <script>window.onload=()=>{window.print();}<\/script></body></html>`;
+  const w=window.open('','_blank');
+  if(!w){toast('Permita popups para imprimir','orange');return;}
+  w.document.write(html);w.document.close();
+}
+
 function navParaConfiguracoes(){
   const items=document.querySelectorAll('.nav-item');
   let el=null;
@@ -1956,7 +2235,7 @@ async function iniciarApp(){
 
 async function carregarTudo(){
   await Promise.all([carregarPacientes(),carregarSessoes(),carregarAgenda()]);
-  renderDashboard(); renderPacientes(); renderSessoes(); renderAgenda();
+  renderDashboard(); renderPacientes(); renderSessoes(); renderAgenda(); renderProdutividade();
 }
 
 // ── CARREGAR DADOS (Supabase direto para leitura) ─────────────────────────────
@@ -4301,7 +4580,7 @@ function nav(page,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   if(el) el.classList.add('active');
   document.getElementById(`page-${page}`)?.classList.add('active');
-  if(page==='relatorios'){ carregarRelatorios(); setTimeout(renderCardsPacientesRel,100); }
+  if(page==='relatorios'){ iniciarPaginaRelatorios(); carregarRelatorios(); }
   if(page==='agenda') renderAgenda();
   if(page==='financeiro'){ inicializarFiltroMes(); renderFinanceiro(); }
 }
