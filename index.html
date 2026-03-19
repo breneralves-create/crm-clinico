@@ -470,18 +470,43 @@ body.light thead th{background:var(--bg3)}
     </div>
     <div id="form-login">
       <div class="field"><label>E-mail</label><input type="email" id="email" placeholder="seu@email.com"></div>
-      <div class="field"><label>Senha</label><input type="password" id="senha" placeholder="••••••••"></div>
+      <div class="field">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+          Senha
+          <a href="#" onclick="abrirRecuperarSenha();return false" style="color:var(--p3);font-size:10px;font-weight:600;letter-spacing:.3px">Esqueci minha senha</a>
+        </label>
+        <div style="position:relative">
+          <input type="password" id="senha" placeholder="••••••••" style="padding-right:42px">
+          <button type="button" onclick="toggleSenhaVisivel('senha',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1">👁</button>
+        </div>
+      </div>
       <div id="login-error" class="error"></div>
       <button class="btn" onclick="login()">Entrar</button>
       <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text3)">
         Não tem conta? <a href="#" onclick="toggleForm();return false" style="color:var(--p3);font-weight:700">Criar grátis</a>
+      </p>
+      <p style="text-align:center;margin-top:10px;font-size:11px;color:var(--text4)">
+        🔒 Sessão segura — encerrada ao fechar o navegador
       </p>
     </div>
     <div id="form-registro" style="display:none">
       <div class="field"><label>Nome completo</label><input type="text" id="reg-nome" placeholder="Dr(a). Ana Silva"></div>
       <div class="field"><label>CRP/CRN (opcional)</label><input type="text" id="reg-crp" placeholder="01/00000"></div>
       <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
-      <div class="field"><label>Senha (mín. 6 caracteres)</label><input type="password" id="reg-senha" placeholder="••••••••"></div>
+      <div class="field">
+        <label>Senha (mín. 10 caracteres)</label>
+        <div style="position:relative">
+          <input type="password" id="reg-senha" placeholder="••••••••" oninput="avaliarForcaSenha(this.value)" style="padding-right:42px">
+          <button type="button" onclick="toggleSenhaVisivel('reg-senha',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1">👁</button>
+        </div>
+        <!-- Medidor de força da senha -->
+        <div id="senha-forca-wrap" style="margin-top:8px;display:none">
+          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:5px">
+            <div id="senha-forca-bar" style="height:100%;width:0%;transition:.3s;border-radius:2px"></div>
+          </div>
+          <div id="senha-forca-label" style="font-size:11px;font-weight:600"></div>
+        </div>
+      </div>
       <div id="reg-error" class="error"></div>
       <button class="btn" onclick="registro()">Criar Conta Grátis</button>
       <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text3)">
@@ -492,11 +517,51 @@ body.light thead th{background:var(--bg3)}
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ APP -->
+<!-- ═══════════════════════════════════════════════════════ BLOQUEIO / UPGRADE -->
+<div id="bloqueio-page" style="display:none;position:fixed;inset:0;z-index:998;background:var(--bg);align-items:center;justify-content:center;padding:20px;flex-direction:column">
+  <div style="max-width:480px;width:100%;text-align:center">
+    <!-- Ícone -->
+    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(239,68,68,.1));border:2px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 24px">🔒</div>
+    <!-- Título -->
+    <h2 id="bloqueio-titulo" style="font-size:22px;font-weight:800;margin-bottom:10px;color:var(--text)">Acesso bloqueado</h2>
+    <p id="bloqueio-msg" style="font-size:14px;color:var(--text3);line-height:1.7;margin-bottom:28px"></p>
+    <!-- Card do plano atual -->
+    <div id="bloqueio-plano-info" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;display:none">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Seu plano atual</div>
+      <div id="bloqueio-plano-nome" style="font-size:18px;font-weight:800;color:var(--p3)"></div>
+      <div id="bloqueio-plano-detalhe" style="font-size:12px;color:var(--text3);margin-top:4px"></div>
+    </div>
+    <!-- Ações -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <a id="bloqueio-btn-upgrade" href="/cdn-cgi/l/email-protection#6c0f0302180d18032c0f0d1804091e0a00031b420f0301420e1e531f190e06090f18513d19091e034c0d1f1f05020d1e4c034c2f0d1804091e2a00031b" style="display:block;padding:14px;background:var(--p1);color:#fff;border-radius:12px;font:700 14px 'Sora',sans-serif;text-decoration:none;text-align:center;box-shadow:0 4px 16px rgba(37,99,235,.35);transition:.2s">
+        🚀 Entrar em contato para assinar
+      </a>
+      <button onclick="logout(false)" style="padding:12px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--text3);font:600 13px 'Sora',sans-serif;cursor:pointer;transition:.2s">
+        Sair da conta
+      </button>
+    </div>
+    <p style="margin-top:20px;font-size:12px;color:var(--text4)">Dúvidas? Entre em contato pelo WhatsApp ou e-mail.</p>
+  </div>
+</div>
+
 <div id="app">
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-icon">🧠</div>
       <div class="logo-text"><strong>CatherFlow</strong><span>Gestão Clínica</span></div>
+    </div>
+    <!-- Badge do plano na sidebar -->
+    <div id="sidebar-plano-badge" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:10px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1px">Plano</div>
+          <div id="sidebar-plano-nome" style="font-size:12px;font-weight:700;color:var(--p3)">—</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:9px;color:var(--text4)">Relatórios/mês</div>
+          <div id="sidebar-rel-counter" style="font-size:11px;font-weight:700;color:var(--text3)">—</div>
+        </div>
+      </div>
     </div>
     <div class="nav-section">Principal</div>
     <div class="nav-item active" onclick="nav('dashboard',this)">
@@ -519,6 +584,10 @@ body.light thead th{background:var(--bg3)}
     <div class="nav-item" onclick="nav('relatorios',this)">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Relatórios
+    </div>
+    <div class="nav-item" onclick="nav('financeiro',this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Financeiro
     </div>
     <div class="nav-section">Conta</div>
     <div class="nav-item" onclick="nav('configuracoes',this)">
@@ -544,6 +613,19 @@ body.light thead th{background:var(--bg3)}
           <button class="btn-primary" onclick="abrirModalAgenda()">+ Nova Consulta</button>
         </div>
       </div>
+      <!-- Banner de perfil incompleto — some quando dados estão preenchidos -->
+      <div id="banner-perfil" style="display:none;margin-bottom:18px;padding:14px 18px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:12px;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="font-size:22px">⚠️</div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13px;font-weight:700;color:var(--warn);margin-bottom:2px">Complete seu perfil profissional</div>
+          <div style="font-size:12px;color:var(--text3)">Seu nome e CRP/CRN precisam estar preenchidos para aparecer nos relatórios PDF.</div>
+        </div>
+        <button onclick="navParaConfiguracoes()" style="padding:8px 16px;background:var(--warn);border:none;border-radius:8px;color:#fff;font:700 12px 'Sora';cursor:pointer;white-space:nowrap;flex-shrink:0">
+          Preencher agora →
+        </button>
+        <button onclick="document.getElementById('banner-perfil').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;flex-shrink:0">×</button>
+      </div>
+
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">Pacientes Ativos</div><div class="kpi-value" id="kpi-pacientes">0</div><div class="kpi-sub up">Em acompanhamento</div></div>
         <div class="kpi-card"><div class="kpi-label">Sessões Este Mês</div><div class="kpi-value" id="kpi-sessoes">0</div><div class="kpi-sub" id="kpi-sess-trend">—</div></div>
@@ -599,7 +681,7 @@ body.light thead th{background:var(--bg3)}
           <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Telefone</div><div id="detalhe-tel" style="font-size:14px;font-weight:600">—</div></div>
           <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">E-mail</div><div id="detalhe-email" style="font-size:14px;font-weight:600">—</div></div>
           <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Nascimento</div><div id="detalhe-nascimento" style="font-size:14px;font-weight:600">—</div></div>
-          <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Queixa Inicial</div><div id="detalhe-queixa" style="font-size:14px;font-weight:600;color:var(--text2)">—</div></div>
+          <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Observações Iniciais</div><div id="detalhe-queixa" style="font-size:14px;font-weight:600;color:var(--text2)">—</div></div>
         </div>
       </div>
 
@@ -620,6 +702,16 @@ body.light thead th{background:var(--bg3)}
     <div id="page-sessoes" class="page">
       <div class="page-header">
         <h1>Sessões Realizadas</h1>
+        <div class="hactions">
+          <button class="btn-sm" onclick="nav('financeiro',document.querySelectorAll('.nav-item')[5])">💰 Ver Financeiro</button>
+        </div>
+      </div>
+      <!-- Resumo rápido financeiro -->
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card"><div class="kpi-label">Total Sessões</div><div class="kpi-value" id="sess-kpi-total" style="font-size:28px">0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total Faturado</div><div class="kpi-value" style="font-size:22px">R$<span id="sess-kpi-fat">0</span></div></div>
+        <div class="kpi-card"><div class="kpi-label">✅ Recebido</div><div class="kpi-value" style="font-size:22px;color:var(--accent)">R$<span id="sess-kpi-pago">0</span></div></div>
+        <div class="kpi-card"><div class="kpi-label">⏳ Pendente</div><div class="kpi-value" style="font-size:22px;color:var(--warn)">R$<span id="sess-kpi-pend">0</span></div></div>
       </div>
       <!-- Filtros -->
       <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
@@ -688,18 +780,72 @@ body.light thead th{background:var(--bg3)}
     <div id="page-relatorios" class="page">
       <div class="page-header">
         <h1>Relatórios</h1>
-        <div class="hactions">
-          <button class="btn-primary" onclick="abrirModalRelatorio()">🤖 Gerar Relatório IA</button>
-        </div>
       </div>
-      <div class="card">
-        <div id="area-relatorio">
-          <div class="empty"><div class="empty-icon">📄</div><p>Clique em "Gerar Relatório IA" para criar um relatório de acompanhamento</p></div>
+
+      <!-- Vista padrão: cards de pacientes com sessões -->
+      <div id="rel-view-pacientes">
+        <div style="margin-bottom:14px">
+          <input type="text" id="rel-busca-pac" placeholder="🔍 Buscar paciente..." oninput="renderCardsPacientesRel()"
+            style="width:100%;max-width:320px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:14px 'Sora';outline:none">
         </div>
+        <div id="rel-cards-pacientes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
       </div>
-      <div class="card" id="card-hist-relatorios">
-        <div class="card-title">📋 Relatórios Gerados</div>
+
+      <!-- Vista: relatório gerado / histórico -->
+      <div id="rel-view-relatorio" style="display:none">
+        <div style="margin-bottom:16px">
+          <button onclick="voltarParaCardsPacientes()" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;color:var(--text2);font:600 13px 'Sora';cursor:pointer">← Voltar</button>
+        </div>
+        <div id="area-relatorio"></div>
+      </div>
+
+      <!-- Histórico de relatórios gerados -->
+      <div class="card" style="margin-top:18px">
+        <div class="card-title" style="justify-content:space-between">
+          <span>📋 Relatórios Gerados</span>
+          <button class="btn-sm" onclick="carregarRelatorios()">↻ Atualizar</button>
+        </div>
         <div id="lista-relatorios"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ── FINANCEIRO ────────────────────────────────────── -->
+    <div id="page-financeiro" class="page">
+      <div class="page-header">
+        <h1>Financeiro <span id="fin-periodo-label"></span></h1>
+        <div class="hactions">
+          <select id="fin-filtro-mes" onchange="renderFinanceiro()" style="padding:9px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:600 13px 'Sora';cursor:pointer">
+          </select>
+        </div>
+      </div>
+
+      <!-- KPIs financeiros -->
+      <div class="kpi-grid" style="margin-bottom:20px">
+        <div class="kpi-card"><div class="kpi-label">💰 Receita Total</div><div class="kpi-value">R$<span id="fin-kpi-total">0</span></div><div class="kpi-sub" id="fin-kpi-sessoes-label">0 sessões</div></div>
+        <div class="kpi-card"><div class="kpi-label">✅ Recebido</div><div class="kpi-value" style="color:var(--accent)">R$<span id="fin-kpi-pago">0</span></div><div class="kpi-sub up" id="fin-kpi-pago-pct"></div></div>
+        <div class="kpi-card"><div class="kpi-label">⏳ Pendente</div><div class="kpi-value" style="color:var(--warn)">R$<span id="fin-kpi-pendente">0</span></div><div class="kpi-sub" id="fin-kpi-pendente-qt"></div></div>
+        <div class="kpi-card"><div class="kpi-label">📊 Ticket Médio</div><div class="kpi-value" style="font-size:22px">R$<span id="fin-kpi-ticket">0</span></div><div class="kpi-sub">por sessão</div></div>
+      </div>
+
+      <!-- Extrato por paciente -->
+      <div class="card">
+        <div class="card-title" style="justify-content:space-between">
+          <span>💳 Extrato por Paciente</span>
+          <div style="display:flex;gap:8px">
+            <select id="fin-filtro-pgto" onchange="renderFinanceiro()" style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font:13px 'Sora';cursor:pointer">
+              <option value="">Todos</option>
+              <option value="pago">✅ Pagos</option>
+              <option value="pendente">⏳ Pendentes</option>
+            </select>
+          </div>
+        </div>
+        <div id="fin-extrato-pacientes"></div>
+      </div>
+
+      <!-- Sessões pendentes de pagamento -->
+      <div class="card" id="fin-card-pendentes" style="margin-top:16px">
+        <div class="card-title">⚠️ Sessões Pendentes de Pagamento</div>
+        <div id="fin-lista-pendentes"></div>
       </div>
     </div>
 
@@ -717,6 +863,7 @@ body.light thead th{background:var(--bg3)}
         <button class="cfg-tab active" onclick="cfgTab('identidade',this)">👤 Identidade</button>
         <button class="cfg-tab" onclick="cfgTab('visual',this)">🎨 Visual</button>
         <button class="cfg-tab" onclick="cfgTab('sistema',this)">⚙️ Sistema</button>
+        <button class="cfg-tab" onclick="cfgTab('plano',this);renderAbaPlano()">💳 Meu Plano</button>
       </div>
 
       <!-- ABA IDENTIDADE -->
@@ -848,6 +995,23 @@ body.light thead th{background:var(--bg3)}
           <button class="btn-primary" onclick="salvarSistema()" style="width:auto;padding:12px 28px">💾 Salvar Sistema</button>
         </div>
       </div>
+
+      <!-- ABA MEU PLANO -->
+      <div id="cfg-plano" class="cfg-panel" style="display:none">
+        <div class="card" style="max-width:600px">
+          <div class="card-title">💳 Meu Plano</div>
+          <div id="cfg-plano-body">
+            <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+          </div>
+        </div>
+        <!-- Histórico de relatórios -->
+        <div class="card" style="max-width:600px;margin-top:16px">
+          <div class="card-title">📊 Uso este mês</div>
+          <div id="cfg-uso-body">
+            <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -866,6 +1030,7 @@ body.light thead th{background:var(--bg3)}
     <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
       <button class="btn-primary" onclick="fecharModal('modal-sessao-detalhe');abrirEditarSessao(sessaoAtual?.id)" style="padding:8px 16px">✏️ Editar Sessão</button>
       <button class="btn-sm" onclick="fecharModal('modal-sessao-detalhe');if(sessaoAtual)abrirDetalhePaciente(sessaoAtual.paciente_id)">👤 Ver Paciente</button>
+      <button class="btn-success" id="btn-marcar-pago-detalhe" onclick="marcarSessaoPagaDetalhe()" style="padding:8px 16px;display:none">✅ Marcar Pago</button>
       <button class="btn-danger" onclick="excluirSessaoAtual()" style="margin-left:auto">Excluir</button>
     </div>
   </div>
@@ -925,7 +1090,7 @@ body.light thead th{background:var(--bg3)}
       <div class="field"><label>Data de Nascimento</label><input type="date" id="edit-pac-nascimento"></div>
     </div>
     <div class="field"><label>E-mail</label><input type="email" id="edit-pac-email" placeholder="paciente@email.com"></div>
-    <div class="field"><label>Queixa Inicial</label><textarea id="edit-pac-queixa" placeholder="Motivo principal..."></textarea></div>
+    <div class="field"><label>Observações Iniciais</label><textarea id="edit-pac-queixa" placeholder="Motivo do contato, contexto geral..."></textarea></div>
     <button class="btn" id="btn-salvar-edit-pac" onclick="salvarEdicaoPaciente()">Salvar Alterações</button>
   </div>
 </div>
@@ -943,7 +1108,7 @@ body.light thead th{background:var(--bg3)}
       <div class="field"><label>Data de Nascimento</label><input type="date" id="pac-nascimento"></div>
     </div>
     <div class="field"><label>E-mail</label><input type="email" id="pac-email" placeholder="paciente@email.com"></div>
-    <div class="field"><label>Queixa Inicial</label><textarea id="pac-queixa" placeholder="Motivo principal que trouxe o paciente ao atendimento..."></textarea></div>
+    <div class="field"><label>Observações Iniciais</label><textarea id="pac-queixa" placeholder="Motivo do contato, contexto geral, primeiras impressões..."></textarea></div>
     <button class="btn" id="btn-salvar-pac" onclick="salvarPaciente()">Salvar Paciente</button>
   </div>
 </div>
@@ -1058,14 +1223,24 @@ body.light thead th{background:var(--bg3)}
 
 <!-- MODAL RELATÓRIO -->
 <div id="modal-relatorio" class="modal">
-  <div class="modal-box" style="max-width:460px">
+  <div class="modal-box" style="max-width:520px">
     <div class="modal-header">
       <div class="modal-title">📄 Gerar Relatório IA</div>
       <button class="modal-close" onclick="fecharModal('modal-relatorio')">×</button>
     </div>
-    <div class="field"><label>Paciente *</label><select id="rel-pac"></select></div>
+    <div class="field">
+      <label>Paciente *</label>
+      <select id="rel-pac" onchange="atualizarSessoesRelatorio()">
+        <option value="">Selecione um paciente...</option>
+      </select>
+    </div>
+    <!-- Sessões do paciente selecionado -->
+    <div id="rel-sessoes-preview" style="display:none;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Sessões disponíveis</div>
+      <div id="rel-sessoes-lista" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.03)"></div>
+    </div>
     <div class="field"><label>Período</label>
-      <select id="rel-periodo" onchange="togglePeriodoCustom()">
+      <select id="rel-periodo" onchange="togglePeriodoCustom();atualizarSessoesRelatorio()">
         <option value="mes">Último mês</option>
         <option value="trimestre">Últimos 3 meses</option>
         <option value="semestre">Últimos 6 meses</option>
@@ -1076,8 +1251,8 @@ body.light thead th{background:var(--bg3)}
     </div>
     <div id="periodo-custom" style="display:none">
       <div class="grid-2">
-        <div class="field"><label>Data Início</label><input type="date" id="rel-inicio"></div>
-        <div class="field"><label>Data Fim</label><input type="date" id="rel-fim"></div>
+        <div class="field"><label>Data Início</label><input type="date" id="rel-inicio" onchange="atualizarSessoesRelatorio()"></div>
+        <div class="field"><label>Data Fim</label><input type="date" id="rel-fim" onchange="atualizarSessoesRelatorio()"></div>
       </div>
     </div>
     <div class="ai-hint">🤖 <strong>IA analisa todas as sessões do período</strong> e gera relatório com 6 seções clínicas + histórico completo. Tempo estimado: ~15 segundos.</div>
@@ -1085,11 +1260,86 @@ body.light thead th{background:var(--bg3)}
   </div>
 </div>
 
+<!-- MODAL RECUPERAR SENHA -->
+<div id="modal-recuperar-senha" class="modal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Recuperar Senha</div>
+      <button class="modal-close" onclick="fecharRecuperarSenha()">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6">
+      Digite seu e-mail de cadastro. Você receberá um link para criar uma nova senha.
+    </p>
+    <div class="field"><label>E-mail</label><input type="email" id="rec-email" placeholder="seu@email.com"></div>
+    <div id="rec-error" class="error"></div>
+    <div id="rec-success" style="display:none;margin-top:12px;padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#34d399;font-size:13px;text-align:center;line-height:1.6"></div>
+    <button class="btn" id="btn-rec-enviar" onclick="enviarRecuperacaoSenha()">📧 Enviar link de recuperação</button>
+    <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--text3)">
+      Lembrou a senha? <a href="#" onclick="fecharRecuperarSenha();return false" style="color:var(--p3);font-weight:600">Voltar ao login</a>
+    </p>
+  </div>
+</div>
+
+<!-- MODAL REDEFINIR SENHA (ativado automaticamente via hash do email) -->
+<div id="modal-redefinir-senha" class="modal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">🔑 Criar Nova Senha</div>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6">
+      Defina uma nova senha para sua conta. Use pelo menos 10 caracteres.
+    </p>
+    <div class="field">
+      <label>Nova Senha (mín. 10 caracteres)</label>
+      <div style="position:relative">
+        <input type="password" id="nova-senha" placeholder="••••••••••" oninput="avaliarForcaSenha(this.value,'nova-forca-bar','nova-forca-label','nova-forca-wrap')" style="padding-right:42px">
+        <button type="button" onclick="toggleSenhaVisivel('nova-senha',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1">👁</button>
+      </div>
+      <div id="nova-forca-wrap" style="margin-top:8px;display:none">
+        <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:5px">
+          <div id="nova-forca-bar" style="height:100%;width:0%;transition:.3s;border-radius:2px"></div>
+        </div>
+        <div id="nova-forca-label" style="font-size:11px;font-weight:600"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Confirmar Nova Senha</label>
+      <input type="password" id="nova-senha-confirm" placeholder="••••••••••">
+    </div>
+    <div id="redef-error" class="error"></div>
+    <button class="btn" id="btn-redef-salvar" onclick="salvarNovaSenha()">✅ Salvar Nova Senha</button>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════════ SCRIPT -->
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// CONFIGURE AQUI — substitua pelos seus dados do Supabase
+// Acesse: https://supabase.com/dashboard → seu projeto → Settings → API
 const SB  = 'https://vsygwhbjadiistfewffz.supabase.co';
 const SK  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzeWd3aGJqYWRpaXN0ZmV3ZmZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0ODQ0MzUsImV4cCI6MjA4MTA2MDQzNX0.DKYHcL_IyrM_OomV1FCazED0_9oWV_P-R_LnhvjpCUo';
+// ══════════════════════════════════════════════════════════════
+//
+// ── SQL SETUP INICIAL (rode no Supabase SQL Editor) ──────────
+// INSERT INTO t1_planos (id, nome, preco_mensal, limite_relatorios)
+// VALUES
+//   (1, 'Gratuito', 0.00,    2),
+//   (2, 'Solo',     79.00,   999999),
+//   (3, 'Clínica',  149.00,  999999)
+// ON CONFLICT (nome) DO NOTHING;
+//
+// Para ativar um usuário manualmente:
+//   UPDATE t2_usuarios SET plano_id = 2 WHERE email = 'email@exemplo.com';
+//
+// Para bloquear um usuário:
+//   UPDATE t2_usuarios SET plano_id = 0 WHERE email = 'email@exemplo.com';
+//
+// Para ver todos os usuários e planos:
+//   SELECT u.email, u.nome_completo, p.nome as plano, u.relatorios_gerados_mes
+//   FROM t2_usuarios u LEFT JOIN t1_planos p ON p.id = u.plano_id
+//   ORDER BY u.created_at DESC;
+// ─────────────────────────────────────────────────────────────
 const N8N = 'https://mountainousmonitorlizard-n8n.cloudfy.live/webhook/catherflow';
 const WH  = {
   sessao   : `${N8N}/registrar-sessao`,
@@ -1128,7 +1378,364 @@ async function whFetch(url, body){
   catch(e){ return {success:true, _fonte:'n8n_body_invalido', _raw:text.substring(0,100)}; }
 }
 
+// ── SEGURANÇA: Brute force client-side (complementa proteção do Supabase) ──────
+// Chave no localStorage (não sessionStorage) para persistir entre sessões
+const BRUTE_KEY = 'cf_login_attempts';
+const MAX_TENTATIVAS = 5;
+const BLOQUEIO_MS = 60 * 60 * 1000; // 1 hora
+
+function getBruteData(){
+  try{ return JSON.parse(localStorage.getItem(BRUTE_KEY)||'{"count":0,"since":0,"blocked":false,"blockedAt":0}'); }
+  catch(e){ return {count:0,since:0,blocked:false,blockedAt:0}; }
+}
+
+function setBruteData(data){ localStorage.setItem(BRUTE_KEY, JSON.stringify(data)); }
+
+function verificarBloqueio(){
+  const d = getBruteData();
+  if(!d.blocked) return false;
+  const agora = Date.now();
+  if(agora - d.blockedAt > BLOQUEIO_MS){
+    // Desbloqueou — reseta
+    setBruteData({count:0,since:agora,blocked:false,blockedAt:0});
+    return false;
+  }
+  const restante = Math.ceil((BLOQUEIO_MS - (agora - d.blockedAt)) / 60000);
+  return `Muitas tentativas. Tente novamente em ${restante} minuto(s).`;
+}
+
+function registrarTentativaFalha(){
+  const d = getBruteData();
+  const agora = Date.now();
+  // Reseta contador se a janela de 15min passou
+  const count = (agora - d.since < 15 * 60 * 1000) ? d.count + 1 : 1;
+  const blocked = count >= MAX_TENTATIVAS;
+  setBruteData({count, since: d.since||agora, blocked, blockedAt: blocked ? agora : d.blockedAt||0});
+  if(blocked) return `Conta temporariamente bloqueada por 1 hora devido a muitas tentativas.`;
+  const restam = MAX_TENTATIVAS - count;
+  return restam > 0 ? `Senha incorreta. ${restam} tentativa(s) restante(s).` : null;
+}
+
+function resetarBrute(){ setBruteData({count:0,since:0,blocked:false,blockedAt:0}); }
+
+// ── SENHA: força e validação ───────────────────────────────────────────────────
+function avaliarForcaSenha(senha, barId='senha-forca-bar', labelId='senha-forca-label', wrapId='senha-forca-wrap'){
+  const wrap = document.getElementById(wrapId);
+  const bar = document.getElementById(barId);
+  const label = document.getElementById(labelId);
+  if(!wrap||!bar||!label) return;
+  if(!senha){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+
+  let score = 0;
+  if(senha.length >= 10) score++;
+  if(senha.length >= 14) score++;
+  if(/[A-Z]/.test(senha)) score++;
+  if(/[0-9]/.test(senha)) score++;
+  if(/[^A-Za-z0-9]/.test(senha)) score++;
+
+  const niveis = [
+    {pct:'20%', cor:'#ef4444', txt:'🔴 Muito fraca'},
+    {pct:'40%', cor:'#f97316', txt:'🟠 Fraca'},
+    {pct:'60%', cor:'#f59e0b', txt:'🟡 Média'},
+    {pct:'80%', cor:'#22c55e', txt:'🟢 Forte'},
+    {pct:'100%',cor:'#10b981', txt:'✅ Muito forte'},
+  ];
+  const nivel = niveis[Math.min(score, 4)];
+  bar.style.width = nivel.pct;
+  bar.style.background = nivel.cor;
+  label.textContent = nivel.txt;
+  label.style.color = nivel.cor;
+}
+
+function validarSenhaForte(senha){
+  if(senha.length < 10) return 'Senha deve ter no mínimo 10 caracteres.';
+  return null;
+}
+
+// ── TOGGLE SENHA VISÍVEL ──────────────────────────────────────────────────────
+function toggleSenhaVisivel(inputId, btn){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+
+// ── RECUPERAÇÃO DE SENHA ──────────────────────────────────────────────────────
+function abrirRecuperarSenha(){
+  document.getElementById('rec-email').value = document.getElementById('email')?.value || '';
+  document.getElementById('rec-error').classList.remove('show');
+  document.getElementById('rec-success').style.display = 'none';
+  const btn = document.getElementById('btn-rec-enviar');
+  if(btn){ btn.disabled=false; btn.textContent='📧 Enviar link de recuperação'; }
+  document.getElementById('modal-recuperar-senha').classList.add('show');
+}
+
+function fecharRecuperarSenha(){
+  document.getElementById('modal-recuperar-senha').classList.remove('show');
+}
+
+async function enviarRecuperacaoSenha(){
+  const email = document.getElementById('rec-email').value.trim();
+  const err = document.getElementById('rec-error');
+  const suc = document.getElementById('rec-success');
+  err.classList.remove('show');
+  suc.style.display = 'none';
+  if(!email){ err.textContent='Digite seu e-mail'; err.classList.add('show'); return; }
+  const btn = document.getElementById('btn-rec-enviar');
+  btn.disabled=true; btn.textContent='Enviando...';
+  try{
+    // Supabase Auth: envia email de reset
+    // redirectTo deve apontar para onde o sistema está hospedado
+    const redirectTo = window.location.origin + window.location.pathname;
+    const r = await fetch(`${SB}/auth/v1/recover`,{
+      method:'POST',
+      headers:{'apikey':SK,'Content-Type':'application/json'},
+      body:JSON.stringify({email, options:{ redirectTo }})
+    });
+    // Supabase sempre retorna 200 mesmo para email não cadastrado (segurança anti-enumeração)
+    suc.style.display = 'block';
+    suc.textContent = '✅ Se este e-mail estiver cadastrado, você receberá um link em instantes. Verifique também a pasta de spam.';
+    btn.textContent = '✓ Enviado';
+  }catch(e){
+    err.textContent = 'Erro de conexão. Tente novamente.';
+    err.classList.add('show');
+    btn.disabled=false; btn.textContent='📧 Enviar link de recuperação';
+  }
+}
+
+async function salvarNovaSenha(){
+  const novaSenha = document.getElementById('nova-senha').value;
+  const confirma = document.getElementById('nova-senha-confirm').value;
+  const err = document.getElementById('redef-error');
+  err.classList.remove('show');
+
+  const erroForca = validarSenhaForte(novaSenha);
+  if(erroForca){ err.textContent=erroForca; err.classList.add('show'); return; }
+  if(novaSenha !== confirma){ err.textContent='As senhas não coincidem.'; err.classList.add('show'); return; }
+
+  const btn = document.getElementById('btn-redef-salvar');
+  btn.disabled=true; btn.textContent='Salvando...';
+  try{
+    // Usa o token de sessão recuperado via hash da URL (tratado no DOMContentLoaded)
+    const r = await fetch(`${SB}/auth/v1/user`,{
+      method:'PUT',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({password:novaSenha})
+    });
+    if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.error_description||e.msg||'Erro ao salvar'); }
+    document.getElementById('modal-redefinir-senha').classList.remove('show');
+    toast('✅ Senha alterada com sucesso! Faça login novamente.');
+    setTimeout(()=>logout(),2000);
+  }catch(e){
+    err.textContent = e.message;
+    err.classList.add('show');
+    btn.disabled=false; btn.textContent='✅ Salvar Nova Senha';
+  }
+}
+
+// ── DETECTAR HASH DE RECUPERAÇÃO DE SENHA NA URL ──────────────────────────────
+// Quando o usuário clica no link do email, o Supabase redireciona com #access_token=...&type=recovery
+function verificarHashRecuperacao(){
+  const hash = window.location.hash;
+  if(!hash) return false;
+  const params = new URLSearchParams(hash.substring(1));
+  const type = params.get('type');
+  const accessToken = params.get('access_token');
+  if(type === 'recovery' && accessToken){
+    // Guarda token temporariamente para uso no salvarNovaSenha
+    token = accessToken;
+    // Limpa o hash da URL por segurança
+    history.replaceState(null, '', window.location.pathname);
+    // Abre modal de redefinição
+    setTimeout(()=>{
+      document.getElementById('modal-redefinir-senha').classList.add('show');
+    }, 300);
+    return true;
+  }
+  return false;
+}
+
 let token=null, user=null, pacientes=[], sessoes=[], agenda=[];
+// Dados do plano atual do usuário
+let planoAtual = null, usuarioDB = null;
+
+// ── CONTROLE DE PLANOS E ACESSO ───────────────────────────────────────────────
+// IDs fixos dos planos (devem corresponder aos ids na tabela t1_planos)
+// Execute no Supabase SQL Editor:
+// INSERT INTO t1_planos (id, nome, preco_mensal, limite_relatorios)
+// VALUES (1,'Gratuito',0,2),(2,'Solo',79,999999),(3,'Clínica',149,999999)
+// ON CONFLICT (nome) DO NOTHING;
+const PLANO_IDS = { GRATUITO: 1, SOLO: 2, CLINICA: 3 };
+
+async function carregarPlanoUsuario() {
+  try {
+    const r = await fetch(
+      `${SB}/rest/v1/t2_usuarios?id=eq.${user.id}` +
+      `&select=id,nome_completo,nome_profissional,registro,nome_clinica,` +
+      `valor_sessao_padrao,avatar_url,plano_id,relatorios_gerados_mes,` +
+      `t1_planos(id,nome,preco_mensal,limite_relatorios)`,
+      { headers: { 'apikey': SK, 'Authorization': `Bearer ${token}` } }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (!Array.isArray(data) || !data[0]) return null;
+    usuarioDB = data[0];
+    planoAtual = data[0].t1_planos || null;
+    return usuarioDB;
+  } catch(e) {
+    console.error('carregarPlanoUsuario:', e);
+    return null;
+  }
+}
+
+function verificarAcessoPlano(usuarioDB) {
+  // Se não tem registro na t2_usuarios ainda → cria automaticamente com plano Gratuito
+  if (!usuarioDB) return { permitido: false, motivo: 'sem_registro' };
+  const planoId = usuarioDB.plano_id || PLANO_IDS.GRATUITO;
+  // Plano 0 ou null = sem plano = bloqueado
+  if (!planoId || planoId === 0 || planoId === null) return { permitido: false, motivo: 'sem_plano' };
+  return { permitido: true, planoId };
+}
+
+function mostrarBloqueio(motivo, usuarioDB) {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  const pg = document.getElementById('bloqueio-page');
+  pg.style.display = 'flex';
+
+  const titulo = document.getElementById('bloqueio-titulo');
+  const msg = document.getElementById('bloqueio-msg');
+  const planoInfo = document.getElementById('bloqueio-plano-info');
+
+  if (motivo === 'sem_registro') {
+    titulo.textContent = '⏳ Conta em análise';
+    msg.textContent = 'Sua conta está sendo configurada. Se isso persistir por mais de alguns minutos, entre em contato.';
+  } else if (motivo === 'sem_plano') {
+    titulo.textContent = '🔒 Acesso bloqueado';
+    msg.textContent = 'Sua conta não possui um plano ativo. Entre em contato para ativar seu acesso ao CatherFlow.';
+  } else {
+    titulo.textContent = '🔒 Acesso restrito';
+    msg.textContent = motivo;
+  }
+
+  if (planoAtual) {
+    planoInfo.style.display = 'block';
+    document.getElementById('bloqueio-plano-nome').textContent = planoAtual.nome || '—';
+    const limRel = planoAtual.limite_relatorios >= 999999 ? 'Ilimitados' : planoAtual.limite_relatorios + ' relatórios/mês';
+    document.getElementById('bloqueio-plano-detalhe').textContent =
+      `R$ ${(planoAtual.preco_mensal||0).toFixed(2)}/mês · ${limRel}`;
+  }
+}
+
+function atualizarBadgePlano() {
+  if (!planoAtual || !usuarioDB) return;
+  const badge = document.getElementById('sidebar-plano-badge');
+  const nomeEl = document.getElementById('sidebar-plano-nome');
+  const counterEl = document.getElementById('sidebar-rel-counter');
+  if (!badge) return;
+  badge.style.display = 'block';
+  nomeEl.textContent = planoAtual.nome || '—';
+  const usados = usuarioDB.relatorios_gerados_mes || 0;
+  const limite = planoAtual.limite_relatorios >= 999999 ? '∞' : planoAtual.limite_relatorios;
+  counterEl.textContent = `${usados} / ${limite}`;
+  // Cor de alerta quando perto do limite
+  if (typeof limite === 'number' && usados >= limite * 0.8) {
+    counterEl.style.color = 'var(--warn)';
+  } else {
+    counterEl.style.color = 'var(--accent)';
+  }
+}
+
+// ── BANNER PERFIL INCOMPLETO ──────────────────────────────────────────────────
+function verificarPerfilCompleto() {
+  // Busca dados salvos — primeiro no usuarioDB (Supabase), depois localStorage
+  let nome = '', registro = '';
+
+  if (usuarioDB) {
+    nome     = usuarioDB.nome_completo || usuarioDB.nome_profissional || '';
+    registro = usuarioDB.registro || '';
+  }
+
+  // Fallback no localStorage
+  if (!nome || !registro) {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('cf_config') || '{}');
+      if (!nome)     nome     = cfg.nome_profissional || '';
+      if (!registro) registro = cfg.registro || '';
+    } catch(e) {}
+  }
+
+  // Fallback nos metadados do auth
+  if (!nome)     nome     = user?.user_metadata?.nome || '';
+  if (!registro) registro = user?.user_metadata?.crp  || '';
+
+  const perfilIncompleto = !nome.trim() || !registro.trim();
+  const banner = document.getElementById('banner-perfil');
+  if (!banner) return;
+
+  if (perfilIncompleto) {
+    banner.style.display = 'flex'; banner.style.alignItems = 'center';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function criarRegistroUsuarioSeNecessario() {
+  // Cria o registro na t2_usuarios se não existir (primeiro login)
+  try {
+    const nome = user.user_metadata?.nome || user.email.split('@')[0];
+    const crp = user.user_metadata?.crp || '';
+    await fetch(`${SB}/rest/v1/t2_usuarios`, {
+      method: 'POST',
+      headers: {
+        'apikey': SK, 'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=ignore-duplicates'  // não faz nada se já existe
+      },
+      body: JSON.stringify({
+        id: user.id,
+        nome_completo: nome,
+        email: user.email,
+        registro: crp,
+        plano_id: PLANO_IDS.GRATUITO,  // começa no plano gratuito
+        relatorios_gerados_mes: 0
+      })
+    });
+  } catch(e) { console.warn('criarRegistroUsuarioSeNecessario:', e); }
+}
+
+// Verifica se o usuário pode gerar mais relatórios neste mês
+function podeGerarRelatorio() {
+  if (!planoAtual || !usuarioDB) return { pode: false, motivo: 'Plano não carregado.' };
+  const usados = usuarioDB.relatorios_gerados_mes || 0;
+  const limite = planoAtual.limite_relatorios || 0;
+  if (usados >= limite) {
+    const nomePlano = planoAtual.nome || 'atual';
+    return {
+      pode: false,
+      motivo: `Você atingiu o limite de ${limite} relatório(s) por mês do plano ${nomePlano}. Entre em contato para fazer upgrade.`
+    };
+  }
+  return { pode: true };
+}
+
+async function incrementarContadorRelatorio() {
+  if (!usuarioDB) return;
+  try {
+    const novoValor = (usuarioDB.relatorios_gerados_mes || 0) + 1;
+    await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SK, 'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ relatorios_gerados_mes: novoValor })
+    });
+    usuarioDB.relatorios_gerados_mes = novoValor;
+    atualizarBadgePlano();
+  } catch(e) { console.warn('incrementarContadorRelatorio:', e); }
+}
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 async function login(){
@@ -1137,6 +1744,11 @@ async function login(){
   const err=document.getElementById('login-error');
   err.classList.remove('show');
   if(!email||!senha){err.textContent='Preencha e-mail e senha';err.classList.add('show');return}
+
+  // Verifica bloqueio por brute force
+  const bloqueio = verificarBloqueio();
+  if(bloqueio){ err.textContent=bloqueio; err.classList.add('show'); return; }
+
   const btn=document.querySelector('#form-login .btn');
   btn.disabled=true; btn.textContent='Entrando...';
   try{
@@ -1145,13 +1757,21 @@ async function login(){
       body:JSON.stringify({email,password:senha})
     });
     const d=await r.json();
-    if(!r.ok){err.textContent='E-mail ou senha incorretos';err.classList.add('show');return}
+    if(!r.ok){
+      // Registra tentativa falha e exibe mensagem com contador
+      const msgBrute = registrarTentativaFalha();
+      err.textContent = msgBrute || 'E-mail ou senha incorretos.';
+      err.classList.add('show');
+      return;
+    }
+    // Login bem-sucedido — reseta contador de brute force
+    resetarBrute();
     token=d.access_token; user=d.user;
-    localStorage.setItem('cf_token',token);
-    localStorage.setItem('cf_refresh',d.refresh_token);
-    localStorage.setItem('cf_user',JSON.stringify(user));
+    sessionStorage.setItem('cf_token',token);
+    sessionStorage.setItem('cf_refresh',d.refresh_token);
+    sessionStorage.setItem('cf_user',JSON.stringify(user));
     iniciarApp();
-  }catch(e){err.textContent='Erro de conexão';err.classList.add('show')}
+  }catch(e){err.textContent='Erro de conexão. Verifique sua internet.';err.classList.add('show')}
   finally{btn.disabled=false;btn.textContent='Entrar'}
 }
 
@@ -1163,7 +1783,8 @@ async function registro(){
   const err=document.getElementById('reg-error');
   err.classList.remove('show');
   if(!nome||!email||!senha){err.textContent='Preencha todos os campos';err.classList.add('show');return}
-  if(senha.length<6){err.textContent='Senha mín. 6 caracteres';err.classList.add('show');return}
+  const erroSenha = validarSenhaForte(senha);
+  if(erroSenha){err.textContent=erroSenha;err.classList.add('show');return}
   const btn=document.querySelector('#form-registro .btn');
   btn.disabled=true; btn.textContent='Criando conta...';
   try{
@@ -1175,9 +1796,9 @@ async function registro(){
     if(!r.ok){err.textContent=d.error_description||'Erro ao criar conta';err.classList.add('show');return}
     if(d.access_token){
       token=d.access_token; user=d.user;
-      localStorage.setItem('cf_token',token);
-      localStorage.setItem('cf_refresh',d.refresh_token);
-      localStorage.setItem('cf_user',JSON.stringify(user));
+      sessionStorage.setItem('cf_token',token);
+      sessionStorage.setItem('cf_refresh',d.refresh_token);
+      sessionStorage.setItem('cf_user',JSON.stringify(user));
       iniciarApp();
     } else {
       err.style.color='var(--accent)';
@@ -1188,19 +1809,22 @@ async function registro(){
   finally{btn.disabled=false;btn.textContent='Criar Conta Grátis'}
 }
 
-function logout(){
-  if(!confirm('Deseja sair?'))return;
-  localStorage.removeItem('cf_token');
-  localStorage.removeItem('cf_refresh');
-  localStorage.removeItem('cf_user');
-  token=null; user=null;
+function logout(confirmar=true){
+  if(confirmar && !confirm('Deseja sair?')) return;
+  sessionStorage.removeItem('cf_token');
+  sessionStorage.removeItem('cf_refresh');
+  sessionStorage.removeItem('cf_user');
+  token=null; user=null; pacientes=[]; sessoes=[]; agenda=[];
   clearInterval(window._refreshTimer);
   document.getElementById('app').style.display='none';
   document.getElementById('login-page').style.display='flex';
+  // Limpa campos de login por segurança
+  const senhaField = document.getElementById('senha');
+  if(senhaField) senhaField.value='';
 }
 
 async function refreshToken(){
-  const rt = localStorage.getItem('cf_refresh');
+  const rt = sessionStorage.getItem('cf_refresh');
   if(!rt) return;
   try{
     const r = await fetch(`${SB}/auth/v1/token?grant_type=refresh_token`,{
@@ -1211,9 +1835,9 @@ async function refreshToken(){
     if(!r.ok) throw new Error('refresh falhou');
     const d = await r.json();
     token = d.access_token;
-    localStorage.setItem('cf_token', token);
-    localStorage.setItem('cf_refresh', d.refresh_token);
-    localStorage.setItem('cf_user', JSON.stringify(d.user));
+    sessionStorage.setItem('cf_token', token);
+    sessionStorage.setItem('cf_refresh', d.refresh_token);
+    sessionStorage.setItem('cf_user', JSON.stringify(d.user));
     user = d.user;
   }catch(e){
     console.warn('Refresh token falhou, fazendo logout', e);
@@ -1228,20 +1852,40 @@ function toggleForm(){
 }
 
 // ── INICIALIZAR APP ───────────────────────────────────────────────────────────
-function iniciarApp(){
+async function iniciarApp(){
+  // Garante que o registro existe na t2_usuarios
+  await criarRegistroUsuarioSeNecessario();
+
+  // Carrega dados do plano antes de qualquer coisa
+  const uDB = await carregarPlanoUsuario();
+
+  // Verifica se tem acesso
+  const acesso = verificarAcessoPlano(uDB);
+  if (!acesso.permitido) {
+    mostrarBloqueio(acesso.motivo, uDB);
+    return;
+  }
+
+  // Acesso liberado — monta o app normalmente
   document.getElementById('login-page').style.display='none';
+  document.getElementById('bloqueio-page').style.display='none';
   document.getElementById('app').style.display='block';
+
   const nome=(user.user_metadata?.nome||user.email.split('@')[0]).split(' ')[0];
   const h=new Date().getHours();
   document.getElementById('greeting').textContent=`${h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}, ${nome} 👋`;
   document.getElementById('user-avatar').textContent=nome[0].toUpperCase();
   document.getElementById('user-name').textContent=user.user_metadata?.nome||nome;
   document.getElementById('user-role').textContent=user.user_metadata?.crp?`CRP ${user.user_metadata.crp}`:'Clique para sair';
+
+  // Atualiza badge do plano na sidebar
+  atualizarBadgePlano();
+
   // Refresh automático a cada 50 minutos (token expira em 60min)
   clearInterval(window._refreshTimer);
   window._refreshTimer = setInterval(refreshToken, 50 * 60 * 1000);
   carregarTudo();
-  carregarFotoDoSupabase();
+  carregarFotoDoSupabase().then(() => verificarPerfilCompleto());
 }
 
 async function carregarTudo(){
@@ -1283,7 +1927,7 @@ async function carregarAgenda(){
 
 async function carregarRelatorios(){
   try{
-    const r=await fetch(`${SB}/rest/v1/${TR}?select=*&order=created_at.desc&limit=10`,{
+    const r=await fetch(`${SB}/rest/v1/${TR}?select=id,paciente_id,paciente_nome,profissional_nome,profissional_crp,clinica_nome,data_inicio,data_fim,total_sessoes_incluidas,s1_visao_geral,s2_melhorou,s3_persiste,s4_solucionado,s5_intervencoes,s6_recomendacoes,historico_sessoes,created_at&order=created_at.desc&limit=20`,{
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
     });
     const data=await r.json();
@@ -1461,6 +2105,18 @@ function renderPacientes(){
 
 function renderSessoes(){
   const div=document.getElementById('lista-sessoes');
+  // Update KPI cards at top of sessions page
+  const totalFat = sessoes.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const totalPago = sessoes.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const totalPend = totalFat - totalPago;
+  const kpiTotal = document.getElementById('sess-kpi-total');
+  const kpiFat = document.getElementById('sess-kpi-fat');
+  const kpiPago = document.getElementById('sess-kpi-pago');
+  const kpiPend = document.getElementById('sess-kpi-pend');
+  if(kpiTotal) kpiTotal.textContent = sessoes.length;
+  if(kpiFat) kpiFat.textContent = totalFat.toFixed(2);
+  if(kpiPago) kpiPago.textContent = totalPago.toFixed(2);
+  if(kpiPend) kpiPend.textContent = totalPend.toFixed(2);
   if(!sessoes.length){
     div.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhuma sessão registrada</p></div>';return;
   }
@@ -1944,24 +2600,117 @@ function abrirSessaoDoAgendamento(){
 function renderListaRelatorios(data){
   const div=document.getElementById('lista-relatorios');
   if(!data.length){
-    div.innerHTML='<div class="empty"><div class="empty-icon">📄</div><p>Nenhum relatório gerado ainda</p></div>';
+    div.innerHTML='<div class="empty"><div class="empty-icon">📄</div><p>Nenhum relatório gerado ainda.<br><small style="color:var(--text3)">Clique em "Gerar Relatório IA" para começar.</small></p></div>';
     return;
   }
-  div.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Paciente</th><th>Gerado em</th><th>Período</th><th>Sessões</th><th>Ações</th></tr></thead><tbody>${
+  div.innerHTML=`<div class="table-wrap"><table><thead><tr>
+    <th>Paciente</th><th>Gerado em</th><th>Período Analisado</th><th>Sessões</th><th>Profissional</th><th>Ações</th>
+  </tr></thead><tbody>${
     data.map(r=>{
       const p=pacientes.find(x=>x.id==r.paciente_id);
-      return`<tr class="row-clickable">
-        <td><strong>${p?.nome||'Paciente #'+r.paciente_id}</strong></td>
-        <td>${fmtDate(r.created_at?.split('T')[0])}</td>
-        <td><span style="font-size:12px;color:var(--text3)">${r.periodo||'—'}</span></td>
-        <td><span class="badge badge-purple">${r.total_sessoes||r.tokens_usados||'—'}</span></td>
-        <td style="display:flex;gap:6px">
-          <button class="btn-sm" onclick="verRelatorio(${r.id})">🖨️ Ver/Imprimir</button>
+      const nomePac = r.paciente_nome || p?.nome || 'Paciente #'+r.paciente_id;
+      const dataInicio = r.data_inicio ? fmtDate(r.data_inicio) : '—';
+      const dataFim = r.data_fim ? fmtDate(r.data_fim) : '—';
+      const periodo = (dataInicio!=='—'&&dataFim!=='—') ? `${dataInicio} → ${dataFim}` : (r.periodo||'—');
+      return`<tr class="row-clickable" onclick="verRelatorioInline(${r.id})">
+        <td><strong>${nomePac}</strong></td>
+        <td style="font-size:12px">${fmtDate(r.created_at?.split('T')[0])}</td>
+        <td><span style="font-size:11px;color:var(--text3)">${periodo}</span></td>
+        <td><span class="badge badge-purple">${r.total_sessoes_incluidas||r.total_sessoes||'—'}</span></td>
+        <td style="font-size:11px;color:var(--text3)">${r.profissional_nome||'—'}</td>
+        <td style="display:flex;gap:6px" onclick="event.stopPropagation()">
+          <button class="btn-sm" onclick="verRelatorioInline(${r.id})">👁️ Ver</button>
+          <button class="btn-sm" onclick="imprimirRelatorioPorId(${r.id})" title="Imprimir">🖨️</button>
           <button class="btn-danger" onclick="excluirRelatorio(${r.id})">Excluir</button>
         </td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
   window._relatoriosSalvos=data;
+}
+
+function verRelatorioInline(id){
+  const rel = window._relatoriosSalvos?.find(r=>r.id===id);
+  if(!rel){toast('Relatório não encontrado','orange');return;}
+  const s = {
+    s1_visao_geral: rel.s1_visao_geral,
+    s2_melhorou: rel.s2_melhorou,
+    s3_persiste: rel.s3_persiste,
+    s4_solucionado: rel.s4_solucionado,
+    s5_intervencoes: typeof rel.s5_intervencoes==='string'?JSON.parse(rel.s5_intervencoes||'[]'):rel.s5_intervencoes||[],
+    s6_recomendacoes: typeof rel.s6_recomendacoes==='string'?JSON.parse(rel.s6_recomendacoes||'[]'):rel.s6_recomendacoes||[]
+  };
+  const hist = typeof rel.historico_sessoes==='string'?JSON.parse(rel.historico_sessoes||'[]'):rel.historico_sessoes||[];
+  const nomePac = rel.paciente_nome || pacientes.find(x=>x.id==rel.paciente_id)?.nome || '—';
+  const dataInicio = rel.data_inicio ? fmtDate(rel.data_inicio) : '—';
+  const dataFim = rel.data_fim ? fmtDate(rel.data_fim) : '—';
+
+  const secaoCard=(titulo,conteudo,cor='124,58,237')=>conteudo?`
+    <div style="background:rgba(${cor},.06);border:1px solid rgba(${cor},.18);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;color:rgba(${cor},1);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${titulo}</div>
+      <div style="font-size:13px;line-height:1.8;color:var(--text2)">${conteudo}</div>
+    </div>`:'';
+  const listaCard=(titulo,itens,cor='124,58,237')=>itens?.length?`
+    <div style="background:rgba(${cor},.06);border:1px solid rgba(${cor},.18);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;color:rgba(${cor},1);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${titulo}</div>
+      <ul style="padding-left:16px;margin:0">${itens.map(i=>`<li style="font-size:13px;line-height:1.9;color:var(--text2)">${i}</li>`).join('')}</ul>
+    </div>`:'';
+
+  window._relAtual = {...rel, secoes:s, historico_sessoes:hist, periodoLabel:`${dataInicio} a ${dataFim}`, pac:{nome:nomePac}, cfgProf:{
+    nome_profissional:rel.profissional_nome,registro:rel.profissional_crp,nome_clinica:rel.clinica_nome
+  }};
+
+  document.getElementById('area-relatorio').innerHTML=`
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(109,40,217,.08));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:4px">${nomePac}</div>
+          <div style="font-size:12px;color:var(--text3)">${dataInicio} a ${dataFim} · ${rel.total_sessoes_incluidas||'?'} sessões · Gerado em ${fmtDate(rel.created_at?.split('T')[0])}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${rel.profissional_nome||''} ${rel.profissional_crp?'· '+rel.profissional_crp:''}</div>
+        </div>
+        <button class="btn-primary" onclick="imprimirRelatorioPorId(${id})" style="flex-shrink:0">🖨️ Imprimir PDF</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+      ${secaoCard('📋 Visão Geral do Período',s.s1_visao_geral)}
+      ${secaoCard('✅ O que Melhorou',s.s2_melhorou,'34,197,94')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+      ${secaoCard('⚠️ O que Persiste',s.s3_persiste,'245,158,11')}
+      ${secaoCard('🎯 O que Foi Solucionado',s.s4_solucionado,'59,130,246')}
+    </div>
+    ${listaCard('🔧 Intervenções Realizadas',s.s5_intervencoes)}
+    ${listaCard('💡 Recomendações',s.s6_recomendacoes,'168,85,247')}
+    ${hist.length?`
+    <div style="border-top:1px solid var(--border);padding-top:20px;margin-top:8px">
+      <div style="font-weight:800;font-size:14px;margin-bottom:14px">📚 Histórico de Sessões <span class="badge badge-purple">${hist.length}</span></div>
+      ${hist.map((h,i)=>`
+        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-left:3px solid var(--p1);border-radius:0 10px 10px 0;padding:14px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-weight:700;font-size:13px;color:var(--p4)">Sessão ${h.numero_sessao||h.sessao||i+1} — ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
+            ${h.status_pagamento?`<span class="badge badge-${h.status_pagamento==='pago'?'green':'orange'}">${h.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span>`:''}
+          </div>
+          ${h.queixas_principais?`<div style="font-size:12px;color:var(--text3);margin-bottom:4px"><strong>Queixas:</strong> ${h.queixas_principais}</div>`:''}
+          ${h.evolucao?`<div style="font-size:12px;color:var(--text3);margin-bottom:4px"><strong>Evolução:</strong> ${h.evolucao}</div>`:''}
+          ${h.resumo_ia?`<div style="font-size:12px;color:var(--text2);line-height:1.7;background:rgba(34,197,94,.06);border-radius:8px;padding:10px;border:1px solid rgba(34,197,94,.15);margin-top:8px">🤖 <strong>Resumo IA:</strong> ${h.resumo_ia}</div>`:''}
+        </div>`).join('')}
+    </div>`:''}`;
+
+  // Scroll para o relatório
+  document.getElementById('area-relatorio').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function imprimirRelatorioPorId(id){
+  const rel = window._relatoriosSalvos?.find(r=>r.id===id);
+  if(rel){ window._relAtual = {...rel, secoes:{
+    s1_visao_geral:rel.s1_visao_geral,s2_melhorou:rel.s2_melhorou,
+    s3_persiste:rel.s3_persiste,s4_solucionado:rel.s4_solucionado,
+    s5_intervencoes:typeof rel.s5_intervencoes==='string'?JSON.parse(rel.s5_intervencoes||'[]'):rel.s5_intervencoes||[],
+    s6_recomendacoes:typeof rel.s6_recomendacoes==='string'?JSON.parse(rel.s6_recomendacoes||'[]'):rel.s6_recomendacoes||[]
+  }, historico_sessoes:typeof rel.historico_sessoes==='string'?JSON.parse(rel.historico_sessoes||'[]'):rel.historico_sessoes||[],
+  periodoLabel:`${fmtDate(rel.data_inicio)} a ${fmtDate(rel.data_fim)}`,
+  pac:{nome:rel.paciente_nome}, cfgProf:{nome_profissional:rel.profissional_nome,registro:rel.profissional_crp,nome_clinica:rel.clinica_nome}
+  }; }
+  imprimirRelatorio();
 }
 
 async function excluirRelatorio(id){
@@ -2024,17 +2773,122 @@ function abrirModalAgenda(){
   document.getElementById('modal-agenda').classList.add('show');
 }
 
-function abrirModalRelatorio(){
-  if(!pacientes.length){toast('Cadastre um paciente primeiro','orange');return}
+function renderCardsPacientesRel(){
+  const busca = (document.getElementById('rel-busca-pac')?.value||'').toLowerCase();
+  const div = document.getElementById('rel-cards-pacientes');
+  if(!div) return;
+  // Filtra pacientes que têm sessões
+  const pacsComSessao = pacientes.filter(p=>
+    sessoes.some(s=>s.paciente_id==p.id) &&
+    (p.nome||'').toLowerCase().includes(busca)
+  );
+  if(!pacsComSessao.length){
+    div.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">👥</div><p>Nenhum paciente com sessões registradas</p></div>';
+    return;
+  }
+  div.innerHTML = pacsComSessao.map(p=>{
+    const ss = sessoes.filter(s=>s.paciente_id==p.id);
+    const total = ss.length;
+    const totalValor = ss.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+    const totalPago = ss.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+    const pendente = totalValor - totalPago;
+    const ultima = ss.sort((a,b)=>b.data_sessao.localeCompare(a.data_sessao))[0];
+    return`<div class="card" style="cursor:pointer;transition:.2s;border:1px solid var(--border)" 
+      onmouseover="this.style.borderColor='rgba(124,58,237,.4)'" 
+      onmouseout="this.style.borderColor='var(--border)'"
+      onclick="abrirModalRelatorio(${p.id})">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0">${(p.nome||'?')[0].toUpperCase()}</div>
+        <div>
+          <div style="font-weight:800;font-size:15px">${p.nome}</div>
+          <div style="font-size:11px;color:var(--text3)">Última sessão: ${fmtDate(ultima?.data_sessao)}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+        <div style="background:rgba(124,58,237,.08);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:var(--p3)">${total}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700">Sessões</div>
+        </div>
+        <div style="background:rgba(34,197,94,.08);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:14px;font-weight:800;color:var(--accent)">R$${totalPago.toFixed(0)}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700">Pago</div>
+        </div>
+        <div style="background:rgba(245,158,11,.08);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:14px;font-weight:800;color:${pendente>0?'var(--warn)':'var(--text3)'}">R$${pendente.toFixed(0)}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700">Pendente</div>
+        </div>
+      </div>
+      <button class="btn" style="width:100%;padding:10px;font-size:13px">🤖 Gerar Relatório IA</button>
+    </div>`;
+  }).join('');
+}
+
+function voltarParaCardsPacientes(){
+  document.getElementById('rel-view-relatorio').style.display='none';
+  document.getElementById('rel-view-pacientes').style.display='block';
+}
+
+function abrirModalRelatorio(pacIdPresel=null){
+  // Filtra só pacientes que têm sessões
+  const pacsComSessao = pacientes.filter(p=>sessoes.some(s=>s.paciente_id==p.id));
+  if(!pacsComSessao.length){toast('Nenhum paciente possui sessões registradas ainda','orange');return}
   const sel=document.getElementById('rel-pac');
-  sel.innerHTML=pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
-  document.getElementById('rel-periodo').value='mes';
+  sel.innerHTML='<option value="">Selecione um paciente...</option>'+pacsComSessao.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  if(pacIdPresel) sel.value=pacIdPresel;
+  document.getElementById('rel-periodo').value='tudo';
   document.getElementById('periodo-custom').style.display='none';
   const hoje=new Date();
   document.getElementById('rel-fim').value=localDateStr(hoje);
-  const ini=new Date(hoje); ini.setMonth(ini.getMonth()-1);
+  const ini=new Date(hoje); ini.setMonth(ini.getMonth()-6);
   document.getElementById('rel-inicio').value=localDateStr(ini);
+  atualizarSessoesRelatorio();
   document.getElementById('modal-relatorio').classList.add('show');
+}
+
+function atualizarSessoesRelatorio(){
+  const pacId = document.getElementById('rel-pac').value;
+  const periodo = document.getElementById('rel-periodo').value;
+  const preview = document.getElementById('rel-sessoes-preview');
+  const lista = document.getElementById('rel-sessoes-lista');
+  if(!pacId){ preview.style.display='none'; return; }
+
+  // Calcula range de datas
+  const hoje = new Date();
+  let dataInicio, dataFim = localDateStr(hoje);
+  if(periodo==='custom'){
+    dataInicio = document.getElementById('rel-inicio').value||'2000-01-01';
+    dataFim = document.getElementById('rel-fim').value||localDateStr(hoje);
+  } else {
+    const mMap={mes:1,trimestre:3,semestre:6,ano:12,tudo:120};
+    const d=new Date(hoje); d.setMonth(d.getMonth()-(mMap[periodo]||120));
+    dataInicio = periodo==='tudo'?'2000-01-01':localDateStr(d);
+  }
+
+  const sessPac = sessoes.filter(s=>
+    s.paciente_id==pacId &&
+    s.data_sessao>=dataInicio &&
+    s.data_sessao<=dataFim
+  ).sort((a,b)=>a.data_sessao.localeCompare(b.data_sessao));
+
+  if(!sessPac.length){
+    preview.style.display='block';
+    lista.innerHTML='<div style="padding:12px;font-size:12px;color:var(--text3);text-align:center">Nenhuma sessão neste período</div>';
+    return;
+  }
+
+  preview.style.display='block';
+  lista.innerHTML = sessPac.map(s=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px">
+        <strong>${fmtDate(s.data_sessao)}</strong>
+        <span style="color:var(--text3);margin-left:8px">${s.horario?s.horario.substring(0,5):''}</span>
+        <span style="color:var(--text3);margin-left:8px;font-size:11px">${s.queixas_principais?s.queixas_principais.substring(0,50)+'...':''}</span>
+      </div>
+      <span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}" style="font-size:10px">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span>
+    </div>`).join('')+
+    `<div style="padding:8px 12px;background:rgba(124,58,237,.08);font-size:11px;font-weight:700;color:var(--p4)">
+      Total: ${sessPac.length} ${sessPac.length===1?'sessão':'sessões'} no período
+    </div>`;
 }
 
 function togglePeriodoCustom(){
@@ -2091,6 +2945,15 @@ function abrirDetalheSession(id){
     ${sessaoAtual.anotacao_clinica?`<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🔒 Anotação Clínica Privada</div><div style="font-size:13px;color:var(--text2);line-height:1.6;background:rgba(245,158,11,.06);border-radius:8px;padding:12px;border:1px solid rgba(245,158,11,.2)">${sessaoAtual.anotacao_clinica}</div></div>`:''}
   `;
   document.getElementById('modal-sessao-detalhe').classList.add('show');
+  // Mostra botão "Marcar Pago" só se sessão estiver pendente
+  const btnPago = document.getElementById('btn-marcar-pago-detalhe');
+  if(btnPago) btnPago.style.display = sessaoAtual.status_pagamento!=='pago' ? 'flex' : 'none';
+}
+
+async function marcarSessaoPagaDetalhe(){
+  if(!sessaoAtual) return;
+  await marcarSessaoPaga(sessaoAtual.id);
+  fecharModal('modal-sessao-detalhe');
 }
 
 function abrirEditarSessao(id){
@@ -2480,6 +3343,14 @@ async function confirmarGerarRelatorio(){
   const pacId=document.getElementById('rel-pac').value;
   const pac=pacientes.find(p=>String(p.id)===String(pacId));
   if(!pac){toast('Selecione um paciente','red');return}
+
+  // Verifica limite de relatórios do plano
+  const permissao = podeGerarRelatorio();
+  if (!permissao.pode) {
+    toast(permissao.motivo, 'red');
+    fecharModal('modal-relatorio');
+    return;
+  }
   const periodo=document.getElementById('rel-periodo').value;
   const hoje=new Date();
   let dataInicio, dataFim=localDateStr(hoje);
@@ -2537,6 +3408,8 @@ async function confirmarGerarRelatorio(){
       valor_sessao_padrao: valorSessaoDB
     });
     if(!d.success) throw new Error(d.mensagem||'Erro ao gerar relatório');
+    // Incrementa contador de relatórios do mês
+    await incrementarContadorRelatorio();
     const s=d.secoes||{};
     const hist=d.historico_sessoes||[];
     const periodoLabel={mes:'Último mês',trimestre:'Últimos 3 meses',semestre:'Últimos 6 meses',ano:'Último ano',tudo:'Todo o histórico',custom:'Período personalizado'}[periodo];
@@ -2613,6 +3486,9 @@ async function confirmarGerarRelatorio(){
             </div>`).join('')}
         </div>`:''}
     `;
+    // Mostra a view de relatório
+    document.getElementById('rel-view-pacientes').style.display='none';
+    document.getElementById('rel-view-relatorio').style.display='block';
     toast('✅ Relatório gerado com sucesso!');
     await carregarRelatorios();
   }catch(e){
@@ -2630,169 +3506,254 @@ async function confirmarGerarRelatorio(){
 }
 
 function verRelatorio(id){
-  const rel=window._relatoriosSalvos?.find(r=>r.id===id);
-  if(!rel){toast('Relatório não encontrado','orange');return;}
-  // Se tem conteudo_html usa ele, senão monta um básico
-  let html = rel.conteudo_html;
-  if(!html){
-    const p = pacientes.find(x=>x.id==rel.paciente_id);
-    html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-    <title>Relatório — ${p?.nome||'Paciente'}</title>
-    <style>body{font-family:Arial,sans-serif;padding:32px;color:#1e293b;max-width:800px;margin:0 auto}
-    h1{color:#5b21b6;margin-bottom:8px}p{color:#64748b;margin-bottom:24px}
-    pre{background:#f8fafc;padding:16px;border-radius:8px;white-space:pre-wrap;font-size:13px;line-height:1.7}
-    </style></head><body>
-    <h1>Relatório de Acompanhamento</h1>
-    <p>${p?.nome||'Paciente'} · Gerado em ${fmtDate(rel.created_at?.split('T')[0])}</p>
-    <pre>${rel.conteudo_texto||JSON.stringify(rel,null,2)}</pre>
-    </body></html>`;
-  }
-  const w=window.open('','_blank');
-  if(!w){toast('Permita popups para imprimir','orange');return;}
-  w.document.write(html);
-  w.document.close();
-  setTimeout(()=>w.print(),800);
+  // Abre o relatório inline na tela (sem popup)
+  verRelatorioInline(id);
+  document.getElementById('rel-view-pacientes').style.display='none';
+  document.getElementById('rel-view-relatorio').style.display='block';
+  document.getElementById('rel-view-relatorio').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function imprimirRelatorio(){
   if(!window._relAtual){toast('Nenhum relatório gerado','orange');return}
-  const d=window._relAtual; const s=d.secoes||{}; const hist=d.historico_sessoes||[];
+  const d = window._relAtual;
+  const s = d.secoes || {};
+  const hist = Array.isArray(d.historico_sessoes) ? d.historico_sessoes :
+    (typeof d.historico_sessoes==='string' ? JSON.parse(d.historico_sessoes||'[]') : []);
+
   let cfgProf={}; try{cfgProf=JSON.parse(localStorage.getItem('cf_config')||'{}');}catch(e){}
-  let cfgSisP={}; try{cfgSisP=JSON.parse(localStorage.getItem('cf_sistema')||'{}');}catch(e){}
-  const profNome = d.cfgProf?.nome_profissional || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
-  const crpRaw = d.cfgProf?.registro || cfgProf.registro || user.user_metadata?.crp || '';
-  const crp = crpRaw ? crpRaw : '';
-  const nomeClinica = d.cfgProf?.nome_clinica || cfgProf.nome_clinica || 'CatherFlow';
-  const tipoProfissional = d.cfgProf?.tipo_profissional || cfgProf.tipo_profissional || '';
-  const endereco = d.cfgProf?.endereco || cfgProf.endereco || '';
-  const whatsapp = d.cfgProf?.whatsapp || cfgProf.whatsapp || '';
-  const valorPadrao = cfgSisP.valor || '';
+  let cfgSis={}; try{cfgSis=JSON.parse(localStorage.getItem('cf_sistema')||'{}');}catch(e){}
+
+  const profNome    = d.cfgProf?.nome_profissional || d.profissional_nome || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
+  const crp         = d.cfgProf?.registro || d.profissional_crp || cfgProf.registro || user.user_metadata?.crp || '';
+  const nomeClinica = d.cfgProf?.nome_clinica || d.clinica_nome || cfgProf.nome_clinica || 'CatherFlow';
+  const pacNome     = d.pac?.nome || d.paciente_nome || d.paciente || '—';
+  const periodoLabel= d.periodoLabel || '—';
+  const totalSess   = d.total_sessoes || hist.length || '—';
   const dataGeracao = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-  <title>Relatório Clínico — ${d.paciente||'Paciente'}</title>
+
+  const secao = (num, titulo, conteudo) => conteudo ? `
+    <div class="sec">
+      <div class="sec-num">${num}.</div>
+      <div class="sec-body">
+        <div class="sec-titulo">${titulo}</div>
+        <div class="sec-texto">${conteudo.replace(/\n/g,'<br>')}</div>
+      </div>
+    </div>` : '';
+
+  const lista = (num, titulo, itens) => itens?.length ? `
+    <div class="sec">
+      <div class="sec-num">${num}.</div>
+      <div class="sec-body">
+        <div class="sec-titulo">${titulo}</div>
+        <ul class="sec-lista">${itens.map(i=>`<li>${i}</li>`).join('')}</ul>
+      </div>
+    </div>` : '';
+
+  const s5 = Array.isArray(s.s5_intervencoes) ? s.s5_intervencoes :
+    (typeof s.s5_intervencoes==='string' ? JSON.parse(s.s5_intervencoes||'[]') : []);
+  const s6 = Array.isArray(s.s6_recomendacoes) ? s.s6_recomendacoes :
+    (typeof s.s6_recomendacoes==='string' ? JSON.parse(s.s6_recomendacoes||'[]') : []);
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Relatório Clínico — ${pacNome}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;font-size:11px;line-height:1.7}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:10.5px;line-height:1.7}
+
     /* CABEÇALHO */
-    .hdr{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;padding:20px 32px;display:flex;justify-content:space-between;align-items:flex-start}
-    .hdr-left .brand{font-size:20px;font-weight:800;letter-spacing:-.5px}
-    .hdr-left .sub{font-size:10px;opacity:.75;margin-top:3px;letter-spacing:.5px;text-transform:uppercase}
-    .hdr-right{text-align:right;font-size:10px;opacity:.8}
-    /* FAIXA DE IDENTIFICAÇÃO */
-    .ident{background:#f5f3ff;border-bottom:2px solid #ede9fe;padding:14px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px}
-    .ident-item label{font-size:8px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:2px}
-    .ident-item span{font-size:12px;font-weight:700;color:#1e293b}
-    /* BODY */
-    .body{padding:20px 32px}
-    /* SEÇÕES CLÍNICAS */
-    .sec-titulo{font-size:9px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.8px;padding-bottom:5px;border-bottom:2px solid #ede9fe;margin:18px 0 8px}
-    .sec-conteudo{font-size:11px;line-height:1.8;color:#334155;text-align:justify;padding:10px 14px;background:#fafafa;border-left:3px solid #c4b5fd;border-radius:0 6px 6px 0;margin-bottom:4px}
+    .hdr{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;padding:22px 36px;display:flex;justify-content:space-between;align-items:center}
+    .hdr-logo{font-size:22px;font-weight:900;letter-spacing:-0.5px}
+    .hdr-sub{font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+    .hdr-right{text-align:right;font-size:10px;opacity:.8;line-height:1.6}
+
+    /* FAIXA PACIENTE */
+    .faixa{background:#f5f3ff;border-bottom:2px solid #ddd6fe;padding:14px 36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px}
+    .faixa-item label{font-size:8px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px}
+    .faixa-item span{font-size:12px;font-weight:700;color:#1e293b}
+
+    /* CORPO */
+    .corpo{padding:22px 36px}
+
+    /* SEÇÕES */
+    .sec{display:flex;gap:14px;margin-bottom:16px;page-break-inside:avoid}
+    .sec-num{font-size:22px;font-weight:900;color:#ddd6fe;line-height:1;flex-shrink:0;width:24px;text-align:right}
+    .sec-body{flex:1;border-left:3px solid #ede9fe;padding-left:14px}
+    .sec-titulo{font-size:10px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+    .sec-texto{font-size:10.5px;line-height:1.8;color:#334155;text-align:justify}
     .sec-lista{padding-left:16px;margin:0}
-    .sec-lista li{font-size:11px;line-height:1.9;color:#334155}
+    .sec-lista li{font-size:10.5px;line-height:1.9;color:#334155}
+
     /* HISTÓRICO */
-    .hist-titulo{font-size:13px;font-weight:800;color:#1e293b;margin:24px 0 12px;padding-top:18px;border-top:2px solid #ede9fe;display:flex;align-items:center;gap:8px}
-    .hist-badge{background:#ede9fe;color:#6d28d9;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px}
-    .hist-card{border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px;background:#fff;page-break-inside:avoid}
-    .hist-card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .hist-card-num{font-size:11px;font-weight:800;color:#4c1d95}
-    .hist-card-pgto-pago{background:#dcfce7;color:#166534;font-size:8px;font-weight:700;padding:2px 8px;border-radius:10px}
-    .hist-card-pgto-pend{background:#fef9c3;color:#854d0e;font-size:8px;font-weight:700;padding:2px 8px;border-radius:10px}
-    .hist-campo label{font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;margin-top:6px}
-    .hist-campo p{font-size:10px;line-height:1.7;color:#334155}
-    .resumo-ia{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:5px;padding:8px 10px;margin-top:8px;font-size:10px;line-height:1.7;color:#166534}
-    .resumo-ia strong{color:#15803d}
+    .hist-titulo{font-size:13px;font-weight:800;color:#1e293b;padding:16px 36px 12px;border-top:2px solid #ede9fe;background:#fafafa;display:flex;align-items:center;gap:10px}
+    .hist-badge{background:#ede9fe;color:#6d28d9;font-size:9px;font-weight:800;padding:3px 10px;border-radius:20px}
+    .hist-card{margin:0 36px 12px;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:14px 16px;background:#fff;page-break-inside:avoid}
+    .hist-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .hist-num{font-size:11px;font-weight:800;color:#4c1d95}
+    .hist-pgto-pago{background:#dcfce7;color:#166534;font-size:8px;font-weight:800;padding:2px 8px;border-radius:10px}
+    .hist-pgto-pend{background:#fef9c3;color:#854d0e;font-size:8px;font-weight:800;padding:2px 8px;border-radius:10px}
+    .hist-campo{margin-bottom:6px}
+    .hist-campo label{font-size:8px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:1px}
+    .hist-campo p{font-size:10px;color:#334155;line-height:1.7}
+    .resumo-ia{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:9px 12px;margin-top:8px}
+    .resumo-ia strong{color:#166534;font-size:9px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+    .resumo-ia p{font-size:10px;color:#1a2e1a;line-height:1.7}
+
     /* RODAPÉ */
-    .ftr{border-top:3px solid #7c3aed;padding:16px 32px;display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;background:#fafafa}
-    .assinatura{min-width:200px}
-    .assinatura .linha{border-top:1px solid #94a3b8;padding-top:5px;margin-top:32px}
-    .assinatura .nome{font-size:11px;font-weight:700;color:#1e293b}
-    .assinatura .registro{font-size:10px;color:#64748b;margin-top:2px}
-    .rodape-info{text-align:right;font-size:9px;color:#94a3b8}
+    .ftr{border-top:3px solid #7c3aed;padding:18px 36px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafafa;margin-top:8px}
+    .ass{min-width:220px}
+    .ass-linha{border-top:1px solid #94a3b8;padding-top:6px;margin-top:36px}
+    .ass-nome{font-size:11px;font-weight:700;color:#1e293b}
+    .ass-reg{font-size:10px;color:#64748b;margin-top:2px}
+    .ftr-info{text-align:right;font-size:9px;color:#94a3b8;line-height:1.8}
+
     @media print{
       body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      .hist-card{page-break-inside:avoid}
+      .hist-card,.sec{page-break-inside:avoid}
     }
   </style></head><body>
 
-  <!-- CABEÇALHO -->
   <div class="hdr">
-    <div class="hdr-left">
-      <div class="brand">${nomeClinica}</div>
-      <div class="sub">Relatório Clínico de Acompanhamento Terapêutico</div>
-      ${tipoProfissional?`<div style="font-size:10px;opacity:.7;margin-top:4px">${tipoProfissional}</div>`:''}
+    <div>
+      <div class="hdr-logo">${nomeClinica}</div>
+      <div class="hdr-sub">Relatório Clínico de Acompanhamento Terapêutico</div>
     </div>
     <div class="hdr-right">
       <div>Gerado em ${dataGeracao}</div>
-      ${endereco?`<div style="margin-top:4px">${endereco}</div>`:''}
-      ${whatsapp?`<div>WhatsApp: ${whatsapp}</div>`:''}
+      ${profNome?`<div>${profNome}</div>`:''}
+      ${crp?`<div>${crp}</div>`:''}
     </div>
   </div>
 
-  <!-- IDENTIFICAÇÃO -->
-  <div class="ident">
-    <div class="ident-item"><label>Paciente</label><span>${d.paciente||'—'}</span></div>
-    <div class="ident-item"><label>Período Analisado</label><span>${d.periodo||window._relAtual?.periodoLabel||'—'}</span></div>
-    <div class="ident-item"><label>Total de Sessões</label><span>${d.total_sessoes||hist.length||'—'}</span></div>
-    <div class="ident-item"><label>Profissional Responsável</label><span>${profNome}</span></div>
-    ${crp?`<div class="ident-item"><label>Registro Profissional</label><span>${crp}</span></div>`:''}
-    ${valorPadrao?`<div class="ident-item"><label>Valor por Sessão</label><span>R$ ${parseFloat(valorPadrao).toFixed(2)}</span></div>`:''}
+  <div class="faixa">
+    <div class="faixa-item"><label>Paciente</label><span>${pacNome}</span></div>
+    <div class="faixa-item"><label>Período Analisado</label><span>${periodoLabel}</span></div>
+    <div class="faixa-item"><label>Total de Sessões</label><span>${totalSess}</span></div>
+    <div class="faixa-item"><label>Profissional</label><span>${profNome||'—'}</span></div>
+    ${crp?`<div class="faixa-item"><label>Registro</label><span>${crp}</span></div>`:''}
   </div>
 
-  <!-- CORPO -->
-  <div class="body">
+  <div class="corpo">
+    ${secao(1,'Visão Geral do Percurso Terapêutico', s.s1_visao_geral)}
+    ${secao(2,'Aspectos que Evoluíram Positivamente', s.s2_melhorou)}
+    ${secao(3,'Aspectos que Ainda Demandam Atenção', s.s3_persiste)}
+    ${secao(4,'Questões Trabalhadas e Superadas', s.s4_solucionado)}
+    ${lista(5,'Intervenções e Técnicas Utilizadas', s5)}
+    ${lista(6,'Recomendações e Encaminhamentos', s6)}
+  </div>
 
-    <!-- SEÇÕES CLÍNICAS -->
-    ${s.s1_visao_geral?`<div class="sec-titulo">1. Visão Geral do Percurso Terapêutico</div><div class="sec-conteudo">${s.s1_visao_geral}</div>`:''}
-    ${s.s2_melhorou?`<div class="sec-titulo">2. Aspectos que Evoluíram Positivamente</div><div class="sec-conteudo">${s.s2_melhorou}</div>`:''}
-    ${s.s3_persiste?`<div class="sec-titulo">3. Aspectos que Ainda Demandam Atenção</div><div class="sec-conteudo">${s.s3_persiste}</div>`:''}
-    ${s.s4_solucionado?`<div class="sec-titulo">4. Questões Trabalhadas e Superadas</div><div class="sec-conteudo">${s.s4_solucionado}</div>`:''}
-    ${s.s5_intervencoes?.length?`<div class="sec-titulo">5. Intervenções e Técnicas Utilizadas</div><ul class="sec-lista">${s.s5_intervencoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
-    ${s.s6_recomendacoes?.length?`<div class="sec-titulo">6. Recomendações e Encaminhamentos</div><ul class="sec-lista">${s.s6_recomendacoes.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
-
-    <!-- HISTÓRICO DETALHADO -->
-    ${hist.length?`
-      <div class="hist-titulo">
-        Histórico Detalhado de Sessões
-        <span class="hist-badge">${hist.length} ${hist.length===1?'sessão':'sessões'}</span>
+  ${hist.length ? `
+  <div class="hist-titulo">
+    Histórico Detalhado de Sessões
+    <span class="hist-badge">${hist.length} ${hist.length===1?'sessão':'sessões'}</span>
+  </div>
+  ${hist.map((h,i)=>{
+    const dataH = h.data ? new Date(h.data.includes('T')?h.data:h.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+    const hrH = h.horario && h.horario!=='00:00:00' ? h.horario.substring(0,5) : '';
+    return `<div class="hist-card">
+      <div class="hist-hdr">
+        <div class="hist-num">Sessão ${h.numero_sessao||h.sessao||i+1} &nbsp;·&nbsp; ${dataH}${hrH?' &nbsp;·&nbsp; '+hrH:''}</div>
+        ${h.status_pagamento?`<span class="${h.status_pagamento==='pago'?'hist-pgto-pago':'hist-pgto-pend'}">${h.status_pagamento==='pago'?'✓ Pago':'⏳ Pendente'}</span>`:''}
       </div>
-      ${hist.map((h,i)=>`
-        <div class="hist-card">
-          <div class="hist-card-hdr">
-            <div class="hist-card-num">Sessão ${h.numero_sessao||h.sessao||i+1} &nbsp;·&nbsp; ${h.data?new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}):'—'}${h.horario?` &nbsp;·&nbsp; ${h.horario.substring(0,5)}`:''}</div>
-            ${h.status_pagamento?`<span class="${h.status_pagamento==='pago'?'hist-card-pgto-pago':'hist-card-pgto-pend'}">${h.status_pagamento==='pago'?'✓ Pago':'⏳ Pendente'}</span>`:''}
-          </div>
-          ${h.queixas_principais?`<div class="hist-campo"><label>Queixas Apresentadas</label><p>${h.queixas_principais}</p></div>`:''}
-          ${h.intervencoes?`<div class="hist-campo"><label>Intervenções Realizadas</label><p>${h.intervencoes}</p></div>`:''}
-          ${h.evolucao?`<div class="hist-campo"><label>Evolução Observada</label><p>${h.evolucao}</p></div>`:''}
-          ${h.pontos_atencao?`<div class="hist-campo"><label>Pontos de Atenção</label><p>${h.pontos_atencao}</p></div>`:''}
-          ${h.proximos_passos?`<div class="hist-campo"><label>Próximos Passos</label><p>${h.proximos_passos}</p></div>`:''}
-          ${h.resumo_ia?`<div class="resumo-ia"><strong>🤖 Análise IA:</strong> ${h.resumo_ia}</div>`:''}
-        </div>`).join('')}`:''}
+      ${h.queixas_principais?`<div class="hist-campo"><label>Queixas Apresentadas</label><p>${h.queixas_principais.replace(/\n/g,'<br>')}</p></div>`:''}
+      ${h.intervencoes?`<div class="hist-campo"><label>Intervenções Realizadas</label><p>${h.intervencoes.replace(/\n/g,'<br>')}</p></div>`:''}
+      ${h.evolucao?`<div class="hist-campo"><label>Evolução Observada</label><p>${h.evolucao.replace(/\n/g,'<br>')}</p></div>`:''}
+      ${h.pontos_atencao?`<div class="hist-campo"><label>Pontos de Atenção</label><p>${h.pontos_atencao.replace(/\n/g,'<br>')}</p></div>`:''}
+      ${h.proximos_passos?`<div class="hist-campo"><label>Próximos Passos</label><p>${h.proximos_passos.replace(/\n/g,'<br>')}</p></div>`:''}
+      ${h.resumo_ia?`<div class="resumo-ia"><strong>🤖 Análise IA</strong><p>${h.resumo_ia.replace(/\n/g,'<br>')}</p></div>`:''}
+    </div>`;
+  }).join('')}` : ''}
 
-  </div>
-
-  <!-- RODAPÉ / ASSINATURA -->
   <div class="ftr">
-    <div class="assinatura">
-      <div class="linha">
-        <div class="nome">${profNome}</div>
-        ${crp?`<div class="registro">${crp}</div>`:''}
-        ${tipoProfissional?`<div class="registro">${tipoProfissional}</div>`:''}
+    <div class="ass">
+      <div class="ass-linha">
+        <div class="ass-nome">${profNome}</div>
+        ${crp?`<div class="ass-reg">${crp}</div>`:''}
       </div>
     </div>
-    <div class="rodape-info">
-      <div>Documento gerado pelo CatherFlow</div>
-      <div style="margin-top:2px">${dataGeracao}</div>
-      <div style="margin-top:2px;font-size:8px;color:#cbd5e1">Este relatório é confidencial e de uso clínico exclusivo</div>
+    <div style="text-align:center">
+      <div class="ass-linha" style="min-width:200px">
+        <div class="ass-reg">Assinatura</div>
+      </div>
+    </div>
+    <div class="ftr-info">
+      <div>Documento gerado pelo ${nomeClinica}</div>
+      <div>${dataGeracao}</div>
+      <div style="font-size:8px;color:#cbd5e1;margin-top:2px">Relatório confidencial — uso clínico exclusivo</div>
     </div>
   </div>
 
   <script>window.onload=()=>{window.print();}<\/script>
   </body></html>`;
-  const w=window.open('','_blank'); w.document.write(html); w.document.close();
+
+  const w = window.open('','_blank');
+  if(!w){toast('Permita popups para imprimir','orange');return;}
+  w.document.write(html);
+  w.document.close();
 }
 
-// ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
+
+function renderAbaPlano() {
+  const body = document.getElementById('cfg-plano-body');
+  const usoBody = document.getElementById('cfg-uso-body');
+  if (!body) return;
+
+  if (!planoAtual || !usuarioDB) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><p>Dados do plano não disponíveis</p></div>';
+    return;
+  }
+
+  const usados = usuarioDB.relatorios_gerados_mes || 0;
+  const limite = planoAtual.limite_relatorios >= 999999 ? null : planoAtual.limite_relatorios;
+  const pct = limite ? Math.min(100, Math.round((usados / limite) * 100)) : 0;
+  const corBarra = pct >= 90 ? 'var(--danger)' : pct >= 70 ? 'var(--warn)' : 'var(--accent)';
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:20px;padding:16px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:12px;margin-bottom:16px">
+      <div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--p1),var(--accent));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">💎</div>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--text)">${planoAtual.nome}</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">R$ ${(planoAtual.preco_mensal||0).toFixed(2)}/mês</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:11px;color:var(--text3)">Relatórios/mês</div>
+        <div style="font-size:16px;font-weight:800;color:var(--p3)">${limite ? limite : '∞'}</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.8">
+      <div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--accent)">✓</span> Pacientes ilimitados</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--accent)">✓</span> Agenda visual completa</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--accent)">✓</span> Sessões e pagamentos</div>
+      <div style="display:flex;gap:8px"><span style="color:var(--accent)">✓</span> ${limite ? limite + ' relatórios IA por mês' : 'Relatórios IA ilimitados'}</div>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <p style="font-size:12px;color:var(--text3)">Para fazer upgrade ou cancelar, entre em contato:</p>
+      <a href="mailto:contato@catherflow.com.br" style="color:var(--p3);font-size:13px;font-weight:600">contato@catherflow.com.br</a>
+    </div>`;
+
+  // Uso este mês
+  if (usoBody) {
+    usoBody.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div style="background:rgba(37,99,235,.06);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:28px;font-weight:800;color:var(--p3)">${usados}</div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-top:4px">Relatórios gerados</div>
+        </div>
+        <div style="background:rgba(16,185,129,.06);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:28px;font-weight:800;color:var(--accent)">${limite ? limite - usados : '∞'}</div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-top:4px">Disponíveis</div>
+        </div>
+      </div>
+      ${limite ? `
+      <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
+        <span>Uso mensal</span><span style="font-weight:700;color:${corBarra}">${pct}%</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${corBarra};transition:.5s;border-radius:4px"></div>
+      </div>
+      <p style="font-size:11px;color:var(--text4);margin-top:8px">O contador reseta no dia 1º de cada mês.</p>` : ''}`;
+  }
+}
+
 function cfgTab(aba, el){
   document.querySelectorAll('.cfg-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.cfg-panel').forEach(p=>p.style.display='none');
@@ -2943,6 +3904,7 @@ async function salvarConfig(){
       toast('✅ Salvo localmente! (banco: '+( err.message||err.details||r.status)+')','orange');
     } else {
       toast('✅ Identidade salva com sucesso!');
+      verificarPerfilCompleto(); // esconde o banner se perfil está completo
     }
   } catch(e){
     console.warn('Config save offline:', e);
@@ -3007,11 +3969,11 @@ function carregarConfiguracoesSalvas(){
   }
 }
 
-// Carrega foto do Supabase Storage após login
+// Sincroniza dados do Supabase → localStorage (Supabase é fonte autoritativa)
+// localStorage é apenas cache para carregamento rápido na mesma sessão
 async function carregarFotoDoSupabase(){
   try{
-    // Busca URL da foto salva no perfil do usuário
-    const r=await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,nome_profissional,registro,nome_clinica,valor_sessao_padrao,avatar_url`,{
+    const r=await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}&select=nome_completo,nome_profissional,registro,nome_clinica,valor_sessao_padrao,avatar_url,tipo_profissional,bio,endereco,whatsapp,instagram,site`,{
       headers:{'apikey':SK,'Authorization':`Bearer ${token}`}
     });
     if(!r.ok){ console.warn('t2_usuarios fetch failed:', r.status); return; }
@@ -3020,18 +3982,48 @@ async function carregarFotoDoSupabase(){
       const u=data[0];
       // Foto
       if(u.avatar_url){ localStorage.setItem('cf_foto',u.avatar_url); aplicarFoto(u.avatar_url); }
-      // Preenche campos de config com dados do banco (sobrescreve localStorage)
+      // Supabase é fonte da verdade — sobrescreve localStorage por completo
+      const cfgCompleto={
+        nome_clinica:u.nome_clinica||'',
+        nome_profissional:u.nome_completo||u.nome_profissional||'',
+        registro:u.registro||'',
+        tipo_profissional:u.tipo_profissional||'',
+        bio:u.bio||'',
+        endereco:u.endereco||'',
+        whatsapp:u.whatsapp||'',
+        instagram:u.instagram||'',
+        site:u.site||''
+      };
+      localStorage.setItem('cf_config', JSON.stringify(cfgCompleto));
+      // Preenche campos de config na tela
       const setEl=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&v!=='')el.value=v;};
       setEl('cfg-nome', u.nome_completo||u.nome_profissional);
       setEl('cfg-registro', u.registro);
       setEl('cfg-clinica', u.nome_clinica);
       setEl('cfg-valor', u.valor_sessao_padrao);
-      // Salva no localStorage também
-      const cfgLocal={nome_clinica:u.nome_clinica,nome_profissional:u.nome_completo||u.nome_profissional,registro:u.registro,valor:u.valor_sessao_padrao};
-      localStorage.setItem('cf_config',JSON.stringify(cfgLocal));
+      setEl('cfg-tipo', u.tipo_profissional);
+      setEl('cfg-bio', u.bio);
+      setEl('cfg-endereco', u.endereco);
+      setEl('cfg-whatsapp', u.whatsapp);
+      setEl('cfg-instagram', u.instagram);
+      setEl('cfg-site', u.site);
       atualizarPreview();
+      verificarPerfilCompleto(); // re-checa banner com dados do banco
+      // Atualiza sidebar com dados reais do banco
+      const nomeDisplay=u.nome_completo||u.nome_profissional||user.email.split('@')[0];
+      const regDisplay=u.registro||user.user_metadata?.crp||'';
+      const userNameEl=document.getElementById('user-name');
+      const userRoleEl=document.getElementById('user-role');
+      if(userNameEl) userNameEl.textContent=nomeDisplay;
+      if(userRoleEl&&regDisplay) userRoleEl.textContent=regDisplay;
+      // Login personalizado
+      const loginTitle=document.getElementById('login-title');
+      const loginSub=document.getElementById('login-sub');
+      if(loginTitle&&u.nome_clinica) loginTitle.textContent=u.nome_clinica;
+      if(loginSub&&(u.nome_completo||u.nome_profissional))
+        loginSub.textContent=(u.nome_completo||u.nome_profissional)+(u.registro?' · '+u.registro:'');
     }
-  }catch(e){console.error('foto supabase',e)}
+  }catch(e){console.error('sync supabase',e)}
 }
 
 function aplicarFoto(src){
@@ -3049,14 +4041,203 @@ function aplicarFoto(src){
   if(loginIni) loginIni.style.display='none';
 }
 
+// ── FINANCEIRO ───────────────────────────────────────────────────────────────
+function inicializarFiltroMes(){
+  const sel = document.getElementById('fin-filtro-mes');
+  if(!sel) return;
+  // Meses dos últimos 12 meses + opção "Tudo"
+  const meses = [];
+  const hoje = new Date();
+  for(let i=0; i<12; i++){
+    const d = new Date(hoje.getFullYear(), hoje.getMonth()-i, 1);
+    const val = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    const label = d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    meses.push({val, label});
+  }
+  sel.innerHTML = '<option value="tudo">Todo o período</option>' +
+    meses.map(m=>`<option value="${m.val}">${m.label}</option>`).join('');
+  // Seleciona mês atual por padrão
+  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  sel.value = mesAtual;
+}
+
+function renderFinanceiro(){
+  if(!sessoes.length && !pacientes.length) return;
+  inicializarFiltroMes();
+  const periodo = document.getElementById('fin-filtro-mes')?.value || 'tudo';
+  const filtroPgto = document.getElementById('fin-filtro-pgto')?.value || '';
+
+  // Filtra sessões pelo período
+  let sessFiltradas = sessoes.filter(s => s.valor && parseFloat(s.valor) > 0);
+  if(periodo !== 'tudo'){
+    sessFiltradas = sessFiltradas.filter(s => s.data_sessao?.startsWith(periodo));
+  }
+  if(filtroPgto) sessFiltradas = sessFiltradas.filter(s => s.status_pagamento === filtroPgto);
+
+  // KPIs
+  const total = sessFiltradas.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const pago = sessFiltradas.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const pendente = total - pago;
+  const ticket = sessFiltradas.length ? total / sessFiltradas.length : 0;
+  const pctPago = total > 0 ? Math.round((pago/total)*100) : 0;
+  const qtPendente = sessFiltradas.filter(s=>s.status_pagamento!=='pago').length;
+
+  document.getElementById('fin-kpi-total').textContent = total.toFixed(2);
+  document.getElementById('fin-kpi-pago').textContent = pago.toFixed(2);
+  document.getElementById('fin-kpi-pendente').textContent = pendente.toFixed(2);
+  document.getElementById('fin-kpi-ticket').textContent = ticket.toFixed(2);
+  document.getElementById('fin-kpi-sessoes-label').textContent = sessFiltradas.length + ' sessões';
+  document.getElementById('fin-kpi-pago-pct').textContent = pctPago + '% do total recebido';
+  document.getElementById('fin-kpi-pendente-qt').textContent = qtPendente + ' sessões pendentes';
+
+  // Label período
+  const labelEl = document.getElementById('fin-periodo-label');
+  if(labelEl){
+    if(periodo==='tudo') labelEl.textContent='— Todo o período';
+    else {
+      const [y,m] = periodo.split('-');
+      const d = new Date(parseInt(y), parseInt(m)-1, 1);
+      labelEl.textContent = '— ' + d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    }
+  }
+
+  // Extrato por paciente
+  const grupos = {};
+  sessoes.filter(s => {
+    if(!s.valor || parseFloat(s.valor)<=0) return false;
+    if(periodo!=='tudo' && !s.data_sessao?.startsWith(periodo)) return false;
+    return true;
+  }).forEach(s=>{
+    if(!grupos[s.paciente_id]) grupos[s.paciente_id]=[];
+    grupos[s.paciente_id].push(s);
+  });
+
+  const divExt = document.getElementById('fin-extrato-pacientes');
+  if(!Object.keys(grupos).length){
+    divExt.innerHTML='<div class="empty"><div class="empty-icon">💰</div><p>Nenhuma sessão com valor registrado neste período</p></div>';
+  } else {
+    // Ordena por pendente desc
+    const linhas = Object.keys(grupos).map(pid=>{
+      const p = pacientes.find(x=>x.id==pid);
+      const ss = grupos[pid];
+      const tPago = ss.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+      const tPend = ss.filter(s=>s.status_pagamento!=='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+      const tTotal = tPago + tPend;
+      const pct = tTotal>0 ? Math.round((tPago/tTotal)*100) : 0;
+      return {pid, p, ss, tPago, tPend, tTotal, pct};
+    }).sort((a,b)=>b.tPend-a.tPend);
+
+    divExt.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Paciente</th><th>Sessões</th><th>Total</th>
+        <th>Recebido</th><th>Pendente</th><th>Status</th><th>Ações</th>
+      </tr></thead>
+      <tbody>${linhas.map(({pid,p,ss,tPago,tPend,tTotal,pct})=>`
+        <tr class="row-clickable" onclick="abrirDetalhePaciente(${pid})">
+          <td><strong>${p?.nome||'Paciente #'+pid}</strong></td>
+          <td><span class="badge badge-purple">${ss.length}</span></td>
+          <td><strong>R$ ${tTotal.toFixed(2)}</strong></td>
+          <td style="color:var(--accent);font-weight:700">R$ ${tPago.toFixed(2)}</td>
+          <td style="color:${tPend>0?'var(--warn)':'var(--text3)'};font-weight:700">R$ ${tPend.toFixed(2)}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;min-width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:var(--accent);transition:.3s"></div>
+              </div>
+              <span style="font-size:11px;font-weight:700;color:${pct===100?'var(--accent)':'var(--text3)'}">${pct}%</span>
+            </div>
+          </td>
+          <td onclick="event.stopPropagation()">
+            ${tPend>0?`<button class="btn-sm" onclick="marcarTudoPago(${pid},'${periodo}')" style="white-space:nowrap;font-size:11px">✅ Marcar pago</button>`:'<span class="badge badge-green">Em dia</span>'}
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  }
+
+  // Sessões pendentes de pagamento
+  const pendentes = sessoes.filter(s=>
+    s.status_pagamento!=='pago' &&
+    s.valor && parseFloat(s.valor)>0 &&
+    (periodo==='tudo' || s.data_sessao?.startsWith(periodo))
+  ).sort((a,b)=>a.data_sessao?.localeCompare(b.data_sessao||'')||0);
+
+  const divPend = document.getElementById('fin-lista-pendentes');
+  const cardPend = document.getElementById('fin-card-pendentes');
+  if(!pendentes.length){
+    if(cardPend) cardPend.style.display='none';
+  } else {
+    if(cardPend) cardPend.style.display='block';
+    divPend.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Data</th><th>Paciente</th><th>Valor</th><th>Tipo</th><th>Ação</th></tr></thead>
+      <tbody>${pendentes.map(s=>{
+        const p = pacientes.find(x=>x.id==s.paciente_id);
+        return`<tr>
+          <td>${fmtDate(s.data_sessao)}</td>
+          <td><strong>${p?.nome||'—'}</strong></td>
+          <td style="font-weight:700;color:var(--warn)">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
+          <td><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
+          <td><button class="btn-sm" onclick="marcarSessaoPaga(${s.id})" style="font-size:11px">✅ Marcar pago</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+}
+
+async function marcarSessaoPaga(sessaoId){
+  try{
+    const r = await fetch(`${SB}/rest/v1/${TS}?id=eq.${sessaoId}&user_id=eq.${user.id}`,{
+      method:'PATCH',
+      headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({status_pagamento:'pago'})
+    });
+    if(!r.ok) throw new Error('Erro ao atualizar');
+    toast('✅ Sessão marcada como paga!');
+    await carregarSessoes();
+    renderFinanceiro(); renderSessoes(); renderDashboard();
+  }catch(e){toast('Erro: '+e.message,'red')}
+}
+
+async function marcarTudoPago(pacienteId, periodo){
+  if(!confirm('Marcar todas as sessões pendentes deste paciente como pagas?')) return;
+  const pendentes = sessoes.filter(s=>
+    s.paciente_id==pacienteId &&
+    s.status_pagamento!=='pago' &&
+    (periodo==='tudo' || s.data_sessao?.startsWith(periodo))
+  );
+  if(!pendentes.length){ toast('Nenhuma sessão pendente','orange'); return; }
+  let ok=0;
+  for(const s of pendentes){
+    try{
+      await fetch(`${SB}/rest/v1/${TS}?id=eq.${s.id}&user_id=eq.${user.id}`,{
+        method:'PATCH',
+        headers:{'apikey':SK,'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+        body:JSON.stringify({status_pagamento:'pago'})
+      });
+      ok++;
+    }catch(e){}
+  }
+  toast(`✅ ${ok} sessão(ões) marcada(s) como paga(s)!`);
+  await carregarSessoes();
+  renderFinanceiro(); renderSessoes(); renderDashboard();
+}
+
 // ── NAVEGAÇÃO ─────────────────────────────────────────────────────────────────
+// Navega para configurações de forma robusta (sem depender de índice)
+function navParaConfiguracoes(){
+  const items = document.querySelectorAll('.nav-item');
+  let cfgItem = null;
+  items.forEach(i => { if(i.textContent.trim().includes('Configurações')) cfgItem = i; });
+  nav('configuracoes', cfgItem);
+}
 function nav(page,el){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   if(el) el.classList.add('active');
   document.getElementById(`page-${page}`)?.classList.add('active');
-  if(page==='relatorios') carregarRelatorios();
+  if(page==='relatorios'){ carregarRelatorios(); setTimeout(renderCardsPacientesRel,100); }
   if(page==='agenda') renderAgenda();
+  if(page==='financeiro'){ inicializarFiltroMes(); renderFinanceiro(); }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -3095,21 +4276,29 @@ function toast(msg,tipo='green'){
 // ── INIT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
   carregarConfiguracoesSalvas();
-  const t=localStorage.getItem('cf_token');
-  const u=localStorage.getItem('cf_user');
-  const rt=localStorage.getItem('cf_refresh');
+
+  // 1. Verifica se é um redirect de recuperação de senha (hash na URL)
+  if(verificarHashRecuperacao()) return; // para aqui, abre modal de nova senha
+
+  // 2. Tenta restaurar sessão do sessionStorage
+  const t=sessionStorage.getItem('cf_token');
+  const u=sessionStorage.getItem('cf_user');
+  const rt=sessionStorage.getItem('cf_refresh');
   if(t&&u){
     token=t; user=JSON.parse(u);
-    // Refresh imediato ao carregar para garantir token válido
     if(rt){
       refreshToken().then(()=>iniciarApp());
     } else {
       iniciarApp();
     }
   }
+
+  // 3. Enter para login e registro
   document.getElementById('senha').addEventListener('keypress',e=>{if(e.key==='Enter')login()});
   document.getElementById('reg-senha').addEventListener('keypress',e=>{if(e.key==='Enter')registro()});
-});
-</script>
-</body>
-</html>
+
+  // 4. Mostra bloqueio ativo se houver
+  const bloqueio = verificarBloqueio();
+  if(bloqueio){
+    const err = document.getElementById('login-error');
+    if(err)
