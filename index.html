@@ -436,6 +436,34 @@ body.light thead th{background:var(--bg3)}
 }
 
 /* ── TOAST ── */
+/* ── MODAL DE CONFIRMAÇÃO CUSTOMIZADO ── */
+#confirm-overlay{
+  position:fixed;inset:0;z-index:9998;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:16px;
+}
+#confirm-overlay.show{display:flex;animation:modalIn .2s ease}
+#confirm-box{
+  max-width:420px;width:100%;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius-xl);padding:28px;
+  box-shadow:var(--shadow-lg);
+}
+#confirm-icon{font-size:36px;margin-bottom:14px;display:block;text-align:center}
+#confirm-titulo{font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px;text-align:center}
+#confirm-msg{font-size:13px;color:var(--text3);line-height:1.6;text-align:center;margin-bottom:24px}
+#confirm-btns{display:flex;gap:10px}
+#confirm-btn-cancel{
+  flex:1;padding:12px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--radius);
+  color:var(--text2);font:600 13px 'Sora',sans-serif;cursor:pointer;transition:.18s;
+}
+#confirm-btn-cancel:hover{background:var(--bg4);border-color:var(--border-accent)}
+#confirm-btn-ok{
+  flex:1;padding:12px;border:none;border-radius:var(--radius);
+  color:#fff;font:700 13px 'Sora',sans-serif;cursor:pointer;transition:.18s;
+}
+
 #toast{
   position:fixed;bottom:24px;right:24px;
   color:#fff;padding:12px 20px;border-radius:var(--radius);
@@ -456,6 +484,19 @@ body.light thead th{background:var(--bg3)}
 <body>
 
 <div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════ CONFIRM MODAL -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <span id="confirm-icon">⚠️</span>
+    <div id="confirm-titulo">Confirmar ação</div>
+    <div id="confirm-msg">Tem certeza?</div>
+    <div id="confirm-btns">
+      <button id="confirm-btn-cancel" onclick="confirmarFechar()">Cancelar</button>
+      <button id="confirm-btn-ok" onclick="confirmarOk()">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════ LOGIN -->
 <div id="login-page">
@@ -594,13 +635,30 @@ body.light thead th{background:var(--bg3)}
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364-6.364l-4.243 4.243m0 6.364l4.243 4.243M6.636 6.636L10.88 10.88m0 6.364L6.636 17.364"/></svg>
       Configurações
     </div>
-    <div class="user-card" onclick="logout()">
+    <div class="user-card" style="cursor:default">
       <div class="user-avatar" id="user-avatar">A</div>
       <div class="user-info">
         <div class="user-name" id="user-name">Carregando...</div>
-        <div class="user-role" id="user-role">Sair</div>
+        <div class="user-role" id="user-role">Profissional</div>
       </div>
     </div>
+    <button onclick="logout()" style="
+      margin-top:6px;width:100%;padding:9px 12px;
+      background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+      border-radius:var(--radius);color:#f87171;
+      font:600 13px 'Sora',sans-serif;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      transition:all .18s;
+    "
+    onmouseover="this.style.background='rgba(239,68,68,.16)';this.style.borderColor='rgba(239,68,68,.4)'"
+    onmouseout="this.style.background='rgba(239,68,68,.08)';this.style.borderColor='rgba(239,68,68,.2)'">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16,17 21,12 16,7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sair
+    </button>
   </aside>
 
   <main class="main">
@@ -1378,6 +1436,59 @@ async function whFetch(url, body){
   catch(e){ return {success:true, _fonte:'n8n_body_invalido', _raw:text.substring(0,100)}; }
 }
 
+// ── MODAL DE CONFIRMAÇÃO CUSTOMIZADO ─────────────────────────────────────────
+// Substitui window.confirm() nativo (popup feio do browser)
+// Uso: await confirmar({ titulo, msg, tipo, txtOk, txtCancel })
+// tipos: 'danger' (vermelho), 'warning' (laranja), 'info' (azul)
+
+let _confirmarResolve = null;
+
+function confirmar({ titulo='Confirmar', msg='Tem certeza?', tipo='danger', txtOk='Confirmar', txtCancel='Cancelar', icone=null } = {}) {
+  return new Promise(resolve => {
+    _confirmarResolve = resolve;
+
+    // Ícone automático por tipo se não fornecido
+    const icones = { danger:'🗑️', warning:'⚠️', info:'💡', success:'✅', logout:'🚪', money:'💰' };
+    document.getElementById('confirm-icon').textContent  = icone || icones[tipo] || '⚠️';
+    document.getElementById('confirm-titulo').textContent = titulo;
+    document.getElementById('confirm-msg').textContent    = msg;
+    document.getElementById('confirm-btn-cancel').textContent = txtCancel;
+    document.getElementById('confirm-btn-ok').textContent     = txtOk;
+
+    // Cor do botão OK por tipo
+    const cores = {
+      danger:  '#dc2626',
+      warning: '#d97706',
+      info:    '#2563eb',
+      success: '#059669',
+      logout:  '#dc2626',
+      money:   '#059669',
+    };
+    const btnOk = document.getElementById('confirm-btn-ok');
+    btnOk.style.background = cores[tipo] || cores.danger;
+    btnOk.style.boxShadow  = `0 4px 12px ${cores[tipo] || cores.danger}44`;
+
+    document.getElementById('confirm-overlay').classList.add('show');
+  });
+}
+
+function confirmarOk() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+  if (_confirmarResolve) { _confirmarResolve(true); _confirmarResolve = null; }
+}
+
+function confirmarFechar() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+  if (_confirmarResolve) { _confirmarResolve(false); _confirmarResolve = null; }
+}
+
+// Fechar com ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('confirm-overlay').classList.contains('show')) {
+    confirmarFechar();
+  }
+});
+
 // ── SEGURANÇA: Brute force client-side (complementa proteção do Supabase) ──────
 // Chave no localStorage (não sessionStorage) para persistir entre sessões
 const BRUTE_KEY = 'cf_login_attempts';
@@ -1809,8 +1920,8 @@ async function registro(){
   finally{btn.disabled=false;btn.textContent='Criar Conta Grátis'}
 }
 
-function logout(confirmar=true){
-  if(confirmar && !confirm('Deseja sair?')) return;
+async function logout(confirmar=true){
+  if(confirmar && !await confirmar({titulo:'Sair do sistema',msg:'Deseja encerrar sua sessão?',tipo:'logout',icone:'🚪',txtOk:'Sair',txtCancel:'Cancelar'})) return;
   sessionStorage.removeItem('cf_token');
   sessionStorage.removeItem('cf_refresh');
   sessionStorage.removeItem('cf_user');
@@ -2502,7 +2613,7 @@ async function confirmarAgendamento(){
 }
 
 async function cancelarAgendamento(){
-  if(!agendamentoAtual||!confirm('Cancelar este agendamento?')) return;
+  if(!agendamentoAtual||!await confirmar({titulo:'Cancelar agendamento',msg:'Tem certeza que deseja cancelar este agendamento?',tipo:'warning',txtOk:'Cancelar agendamento',txtCancel:'Voltar'})) return;
   try{
     await fetch(`${SB}/rest/v1/${TA}?id=eq.${agendamentoAtual.id}`,{
       method:'PATCH',
@@ -2516,7 +2627,7 @@ async function cancelarAgendamento(){
 }
 
 async function excluirAgendamentoDetalhe(){
-  if(!agendamentoAtual||!confirm('Excluir este agendamento?')) return;
+  if(!agendamentoAtual||!await confirmar({titulo:'Excluir agendamento',msg:'Esta ação não pode ser desfeita.',tipo:'danger',txtOk:'Excluir',txtCancel:'Cancelar'})) return;
   fecharModal('modal-ag-detalhe');
   try{
     await fetch(`${SB}/rest/v1/${TA}?id=eq.${agendamentoAtual.id}`,{
@@ -2714,7 +2825,7 @@ function imprimirRelatorioPorId(id){
 }
 
 async function excluirRelatorio(id){
-  if(!confirm('Excluir este relatório?')) return;
+  if(!await confirmar({titulo:'Excluir relatório',msg:'O relatório será removido permanentemente.',tipo:'danger',txtOk:'Excluir',txtCancel:'Cancelar'})) return;
   try{
     await fetch(`${SB}/rest/v1/${TR}?id=eq.${id}&user_id=eq.${user.id}`,{
       method:'DELETE',
@@ -3010,7 +3121,7 @@ async function salvarEdicaoSessao(){
 }
 
 async function excluirSessaoAtual(){
-  if(!sessaoAtual||!confirm('Excluir esta sessão? Esta ação não pode ser desfeita.')) return;
+  if(!sessaoAtual||!await confirmar({titulo:'Excluir sessão',msg:'Esta sessão e seus dados serão removidos permanentemente.',tipo:'danger',txtOk:'Excluir',txtCancel:'Cancelar'})) return;
   try{
     const r = await fetch(`${SB}/rest/v1/${TS}?id=eq.${sessaoAtual.id}&user_id=eq.${user.id}`,{
       method:'DELETE',
@@ -3026,7 +3137,7 @@ async function excluirSessaoAtual(){
 }
 
 async function excluirSessaoDireto(id){
-  if(!confirm('Excluir esta sessão? Esta ação não pode ser desfeita.')) return;
+  if(!await confirmar({titulo:'Excluir sessão',msg:'Esta sessão será removida permanentemente.',tipo:'danger',txtOk:'Excluir',txtCancel:'Cancelar'})) return;
   try{
     const r = await fetch(`${SB}/rest/v1/${TS}?id=eq.${id}&user_id=eq.${user.id}`,{
       method:'DELETE',
@@ -3188,7 +3299,7 @@ async function salvarPaciente(){
 
 // ── EXCLUIR PACIENTE (Supabase direto) ────────────────────────────────────────
 async function excluirPaciente(id,nome){
-  if(!confirm(`Excluir "${nome}"? Isso também apagará todas as sessões deste paciente.`))return;
+  if(!await confirmar({titulo:'Excluir paciente',msg:`Excluir "${nome}"? Todas as sessões deste paciente também serão removidas. Esta ação não pode ser desfeita.`,tipo:'danger',txtOk:'Excluir tudo',txtCancel:'Cancelar'}))return;
   try{
     await fetch(`${SB}/rest/v1/${TP}?id=eq.${id}`,{
       method:'DELETE',
@@ -3327,7 +3438,7 @@ async function salvarAgendamento(){
 
 // ── EXCLUIR AGENDAMENTO ───────────────────────────────────────────────────────
 async function excluirAgendamento(id){
-  if(!confirm('Excluir este agendamento?'))return;
+  if(!await confirmar({titulo:'Excluir agendamento',msg:'Esta ação não pode ser desfeita.',tipo:'danger',txtOk:'Excluir',txtCancel:'Cancelar'}))return;
   try{
     await fetch(`${SB}/rest/v1/${TA}?id=eq.${id}`,{
       method:'DELETE',
@@ -4199,7 +4310,7 @@ async function marcarSessaoPaga(sessaoId){
 }
 
 async function marcarTudoPago(pacienteId, periodo){
-  if(!confirm('Marcar todas as sessões pendentes deste paciente como pagas?')) return;
+  if(!await confirmar({titulo:'Marcar como pagas',msg:'Todas as sessões pendentes deste paciente serão marcadas como pagas.',tipo:'money',icone:'💰',txtOk:'Confirmar',txtCancel:'Cancelar'})) return;
   const pendentes = sessoes.filter(s=>
     s.paciente_id==pacienteId &&
     s.status_pagamento!=='pago' &&
