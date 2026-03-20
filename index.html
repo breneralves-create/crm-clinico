@@ -619,7 +619,10 @@ body.light thead th{background:var(--bg3)}
       Configurações
     </div>
     <div class="user-card" style="cursor:default">
-      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-avatar" id="user-avatar" style="position:relative;overflow:hidden">
+        <span id="user-avatar-ini">A</span>
+        <img id="user-foto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;border-radius:50%" alt="">
+      </div>
       <div class="user-info">
         <div class="user-name" id="user-name">Carregando...</div>
         <div class="user-role" id="user-role">Profissional</div>
@@ -744,6 +747,9 @@ body.light thead th{background:var(--bg3)}
       <!-- Filtros -->
       <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
         <input type="text" id="sess-busca" placeholder="🔍 Buscar paciente..." oninput="renderSessoes()" style="flex:1;min-width:180px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:14px 'Sora';outline:none">
+        <select id="filtro-paciente" onchange="renderSessoes()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:13px 'Sora';cursor:pointer;min-width:160px">
+          <option value="">Todos os pacientes</option>
+        </select>
         <select id="sess-filtro-pgto" onchange="renderSessoes()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:13px 'Sora';cursor:pointer">
           <option value="">Todos os pagamentos</option>
           <option value="pago">✓ Pagos</option>
@@ -754,6 +760,9 @@ body.light thead th{background:var(--bg3)}
           <option value="presencial">Presencial</option>
           <option value="online">Online</option>
         </select>
+        <input type="date" id="filtro-data-inicio" onchange="renderSessoes()" title="Data início" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:13px 'Sora'">
+        <input type="date" id="filtro-data-fim" onchange="renderSessoes()" title="Data fim" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:13px 'Sora'">
+        <button class="btn-sm" onclick="imprimirSessoesFiltradas()" title="Imprimir sessões">🖨️</button>
       </div>
       <div id="lista-sessoes"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></div>
     </div>
@@ -870,7 +879,7 @@ body.light thead th{background:var(--bg3)}
       </div>
 
       <!-- Período personalizado -->
-      <div id="rel-custom-datas" style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div id="rel-custom-datas" style="display:none;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
         <div class="field" style="margin:0">
           <label>Data início</label>
           <input type="date" id="rel-data-ini" onchange="filtrarSessoesRelatorio()">
@@ -882,7 +891,7 @@ body.light thead th{background:var(--bg3)}
       </div>
 
       <!-- Barra flutuante de seleção (aparece quando há sessões marcadas) -->
-      <div id="rel-barra-sel" style="display:none;position:sticky;top:12px;z-index:50;margin-bottom:16px;padding:14px 20px;background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:12px;box-shadow:0 4px 20px rgba(37,99,235,.4);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div id="rel-barra-sel" style="display:none;position:sticky;top:12px;z-index:50;margin-bottom:16px;padding:14px 20px;background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:12px;box-shadow:0 4px 20px rgba(37,99,235,.4);align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;gap:12px">
           <span style="font-size:20px">📋</span>
           <div>
@@ -907,15 +916,34 @@ body.light thead th{background:var(--bg3)}
         </div>
       </div>
 
-      <!-- Histórico de relatórios gerados -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;margin-top:8px">
-        <div style="font-size:14px;font-weight:800;color:var(--text)">📚 Relatórios Gerados</div>
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-        <button class="btn-sm" onclick="carregarRelatorios()">↻ Atualizar</button>
+      <!-- View com relatório gerado inline -->
+      <div id="rel-view-relatorio" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <button class="btn-sm" onclick="document.getElementById('rel-view-relatorio').style.display='none';document.getElementById('rel-view-pacientes').style.display='block'">← Voltar</button>
+          <div style="font-size:14px;font-weight:800;color:var(--text)">📄 Relatório Gerado</div>
+        </div>
+        <div id="area-relatorio" class="card"></div>
       </div>
-      <div id="lista-relatorios">
-        <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
-      </div>
+
+      <!-- View principal de relatórios -->
+      <div id="rel-view-pacientes">
+        <!-- Busca de pacientes para relatório rápido -->
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <input type="text" id="rel-busca-pac" placeholder="🔍 Buscar paciente..." oninput="renderCardsPacientesRel()"
+            style="flex:1;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:14px 'Sora';outline:none">
+        </div>
+        <div id="rel-cards-pacientes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:24px"></div>
+
+        <!-- Histórico de relatórios gerados -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;margin-top:8px">
+          <div style="font-size:14px;font-weight:800;color:var(--text)">📚 Relatórios Gerados</div>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <button class="btn-sm" onclick="carregarRelatorios()">↻ Atualizar</button>
+        </div>
+        <div id="lista-relatorios">
+          <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+        </div>
+      </div><!-- /rel-view-pacientes -->
     </div>
 
     <!-- ── FINANCEIRO ────────────────────────────────────── -->
@@ -1050,20 +1078,7 @@ body.light thead th{background:var(--bg3)}
 
           <div style="margin-bottom:24px">
             <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Cor de Destaque</div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              ${[
-                ['#2563EB','Roxo (padrão)'],
-                ['#2563eb','Azul'],
-                ['#059669','Verde'],
-                ['#dc2626','Vermelho'],
-                ['#d97706','Âmbar'],
-                ['#db2777','Rosa'],
-              ].map(([cor,nome])=>`
-                <div onclick="setCorDestaque('${cor}')" title="${nome}"
-                  style="width:36px;height:36px;border-radius:50%;background:${cor};cursor:pointer;border:3px solid transparent;transition:.2s"
-                  class="cor-btn" data-cor="${cor}">
-                </div>`).join('')}
-            </div>
+            <div id="cfg-cores-container" style="display:flex;gap:10px;flex-wrap:wrap"></div>
           </div>
 
           <button class="btn-primary" onclick="salvarVisual()" style="width:auto;padding:12px 28px">💾 Salvar Visual</button>
@@ -1421,7 +1436,6 @@ body.light thead th{background:var(--bg3)}
 </div>
 
 <!-- ═══════════════════════════════════════════════ SCRIPT -->
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
 <script>
 // ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
@@ -1478,6 +1492,18 @@ async function whFetch(url, body){
       'x-cf-secret'  : CF_SECRET,
       'x-cf-token'   : token,
     },
+    body: JSON.stringify(body)
+  });
+  if(!r.ok){
+    const err = await r.json().catch(()=>({}));
+    throw new Error(err.mensagem||err.error||`Erro ${r.status}`);
+  }
+  const text = await r.text();
+  if(!text || text.trim()==='') return {success:true, _fonte:'n8n_sem_body'};
+  try{ return JSON.parse(text); }
+  catch(e){ return {success:true, _fonte:'n8n_body_invalido', _raw:text.substring(0,100)}; }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // CATHERFLOW - MELHORIAS IMPLEMENTADAS
 // ═══════════════════════════════════════════════════════════════════
@@ -1647,18 +1673,6 @@ const CacheSystem = {
       .forEach(k => localStorage.removeItem(k));
   }
 };
-    body: JSON.stringify(body)
-  });
-  if(!r.ok){
-    const err = await r.json().catch(()=>({}));
-    throw new Error(err.mensagem||err.error||`Erro ${r.status}`);
-  }
-  // Trata body vazio ou inválido — N8N às vezes retorna sem JSON
-  const text = await r.text();
-  if(!text || text.trim()==='') return {success:true, _fonte:'n8n_sem_body'};
-  try{ return JSON.parse(text); }
-  catch(e){ return {success:true, _fonte:'n8n_body_invalido', _raw:text.substring(0,100)}; }
-}
 
 // ── MODAL DE CONFIRMAÇÃO ─────────────────────────────────────────────────────
 let _confirmarResolve = null;
@@ -1889,12 +1903,6 @@ function gerarPDFProdutividade(){
   w.document.write(html);w.document.close();
 }
 
-function navParaConfiguracoes(){
-  const items=document.querySelectorAll('.nav-item');
-  let el=null;
-  items.forEach(i=>{if(i.textContent.trim().includes('Configurações'))el=i;});
-  nav('configuracoes',el);
-}
 
 // ── SEGURANÇA: Brute force client-side (complementa proteção do Supabase) ──────
 // Chave no localStorage (não sessionStorage) para persistir entre sessões
@@ -2044,7 +2052,7 @@ async function salvarNovaSenha(){
     if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.error_description||e.msg||'Erro ao salvar'); }
     document.getElementById('modal-redefinir-senha').classList.remove('show');
     toast('✅ Senha alterada com sucesso! Faça login novamente.');
-    setTimeout(()=>logout(),2000);
+    setTimeout(()=>logout(false),2000);
   }catch(e){
     err.textContent = e.message;
     err.classList.add('show');
@@ -2345,8 +2353,8 @@ async function registro(){
   finally{btn.disabled=false;btn.textContent='Criar Conta Grátis'}
 }
 
-async function logout(confirmar=true){
-  if(confirmar && !await confirmar({titulo:'Sair',msg:'Deseja encerrar sua sessão?',tipo:'logout',icone:'🚪',txtOk:'Sair',txtCancel:'Cancelar'})) return;
+async function logout(pedirConfirmacao=true){
+  if(pedirConfirmacao && !await confirmar({titulo:'Sair',msg:'Deseja encerrar sua sessão?',tipo:'logout',icone:'🚪',txtOk:'Sair',txtCancel:'Cancelar'})) return;
   sessionStorage.removeItem('cf_token');
   sessionStorage.removeItem('cf_refresh');
   sessionStorage.removeItem('cf_user');
@@ -2377,7 +2385,7 @@ async function refreshToken(){
     user = d.user;
   }catch(e){
     console.warn('Refresh token falhou, fazendo logout', e);
-    logout();
+    logout(false);
   }
 }
 
@@ -2410,7 +2418,7 @@ async function iniciarApp(){
   const nome=(user.user_metadata?.nome||user.email.split('@')[0]).split(' ')[0];
   const h=new Date().getHours();
   document.getElementById('greeting').textContent=`${h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}, ${nome} 👋`;
-  document.getElementById('user-avatar').textContent=nome[0].toUpperCase();
+  const _ini=document.getElementById('user-avatar-ini'); if(_ini) _ini.textContent=nome[0].toUpperCase();
   document.getElementById('user-name').textContent=user.user_metadata?.nome||nome;
   document.getElementById('user-role').textContent=user.user_metadata?.crp?`CRP ${user.user_metadata.crp}`:'Clique para sair';
 
@@ -2645,7 +2653,7 @@ function renderSessoes(){
   const filtroPacSel = document.getElementById("filtro-paciente");
   if(filtroPacSel && pacientes.length) {
     const valorAtual = filtroPacSel.value;
-    filtroPacSel.innerHTML = "<option value="">Todos os pacientes</option>" + pacientes.map(p => `<option value="${p.id}">${p.nome}</option>`).join("");
+    filtroPacSel.innerHTML = '<option value="">Todos os pacientes</option>' + pacientes.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
     if(valorAtual) filtroPacSel.value = valorAtual;
   }
   // Update KPI cards at top of sessions page
@@ -3242,11 +3250,6 @@ function verRelatorioInline(id){
   document.getElementById('area-relatorio').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function imprimirRelatorioPorId(id){
-// ═══════════════════════════════════════════════════════════════════
-// FUNÇÃO: IMPRIMIR SESSÕES FILTRADAS (SEM RELATÓRIO)
-// ═══════════════════════════════════════════════════════════════════
-
 function imprimirSessoesFiltradas() {
   // Pega configurações do profissional
   let cfgProf = {};
@@ -3588,6 +3591,8 @@ function imprimirSessoesFiltradas() {
   w.document.write(html);
   w.document.close();
 }
+
+function imprimirRelatorioPorId(id){
   const rel = window._relatoriosSalvos?.find(r=>r.id===id);
   if(rel){ window._relAtual = {...rel, secoes:{
     s1_visao_geral:rel.s1_visao_geral,s2_melhorou:rel.s2_melhorou,
@@ -4723,9 +4728,10 @@ async function previewFoto(input){
 }
 
 function atualizarFotoSidebar(src){
-  const av=document.getElementById('user-avatar');
-  if(!av) return;
-  av.innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  const foto=document.getElementById('user-foto');
+  const ini=document.getElementById('user-avatar-ini');
+  if(foto){foto.src=src;foto.style.display='block';}
+  if(ini) ini.style.display='none';
 }
 
 function setTema(tema){
@@ -4827,6 +4833,12 @@ function salvarSistema(){
 }
 
 function carregarConfiguracoesSalvas(){
+  // Renderiza botões de cor de destaque (não podem ser template literal no HTML)
+  const _coresEl = document.getElementById('cfg-cores-container');
+  if(_coresEl){
+    const _cores=[['#2563EB','Azul'],['#059669','Verde'],['#dc2626','Vermelho'],['#d97706','Âmbar'],['#db2777','Rosa'],['#7c3aed','Roxo']];
+    _coresEl.innerHTML = _cores.map(([c,n])=>`<div onclick="setCorDestaque('${c}')" title="${n}" class="cor-btn" data-cor="${c}" style="width:36px;height:36px;border-radius:50%;background:${c};cursor:pointer;border:3px solid transparent;transition:.2s"></div>`).join('');
+  }
   // Tema
   const tema=localStorage.getItem('cf_tema');
   if(tema==='claro') setTema('claro');
@@ -5127,7 +5139,7 @@ function nav(page,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   if(el) el.classList.add('active');
   document.getElementById(`page-${page}`)?.classList.add('active');
-  if(page==='relatorios'){ iniciarPaginaRelatorios(); carregarRelatorios(); }
+  if(page==='relatorios'){ iniciarPaginaRelatorios(); carregarRelatorios(); renderCardsPacientesRel(); }
   if(page==='agenda') renderAgenda();
   if(page==='financeiro'){ inicializarFiltroMes(); renderFinanceiro(); }
 }
@@ -5179,7 +5191,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(t&&u){
     token=t; user=JSON.parse(u);
     if(rt){
-      refreshToken().then(()=>iniciarApp());
+      refreshToken().then(()=>{ if(token) iniciarApp(); });
     } else {
       iniciarApp();
     }
