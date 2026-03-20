@@ -1052,7 +1052,7 @@ body.light thead th{background:var(--bg3)}
             <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Cor de Destaque</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
               ${[
-                ['#7c3aed','Roxo (padrão)'],
+                ['#2563EB','Roxo (padrão)'],
                 ['#2563eb','Azul'],
                 ['#059669','Verde'],
                 ['#dc2626','Vermelho'],
@@ -1478,6 +1478,175 @@ async function whFetch(url, body){
       'x-cf-secret'  : CF_SECRET,
       'x-cf-token'   : token,
     },
+// ═══════════════════════════════════════════════════════════════════
+// CATHERFLOW - MELHORIAS IMPLEMENTADAS
+// ═══════════════════════════════════════════════════════════════════
+
+// ── SISTEMA DE EVENT BUS (ATUALIZAÇÃO EM TEMPO REAL) ──────────────
+const EventBus = {
+  listeners: {},
+  
+  on(event, callback) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    this.listeners[event].push(callback);
+  },
+  
+  emit(event, data) {
+    if (!this.listeners[event]) return;
+    this.listeners[event].forEach(cb => cb(data));
+  },
+  
+  off(event, callback) {
+    if (!this.listeners[event]) return;
+    this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+  }
+};
+
+// Registrar listeners na inicialização
+EventBus.on('config:updated', (config) => {
+  atualizarSidebar(config);
+  atualizarLogin(config);
+  atualizarPreviews(config);
+});
+
+EventBus.on('foto:updated', (fotoUrl) => {
+  atualizarFotoEmTodosLugares(fotoUrl);
+});
+
+// ── FUNÇÕES DE ATUALIZAÇÃO EM TEMPO REAL ──────────────────────────
+function atualizarSidebar(config) {
+  const userNameEl = document.getElementById('user-name');
+  const userRoleEl = document.getElementById('user-role');
+  const userFotoEl = document.getElementById('user-foto');
+  
+  if(userNameEl) userNameEl.textContent = config.nome || user.email.split('@')[0];
+  if(userRoleEl && config.registro) userRoleEl.textContent = config.registro;
+  if(userFotoEl && config.foto) {
+    userFotoEl.src = config.foto;
+    userFotoEl.style.display = 'block';
+  }
+}
+
+function atualizarLogin(config) {
+  const loginTitle = document.getElementById('login-title');
+  const loginSub = document.getElementById('login-sub');
+  
+  if(loginTitle && config.clinica) loginTitle.textContent = config.clinica;
+  if(loginSub) {
+    const subText = config.nome + (config.registro ? ' · ' + config.registro : '');
+    loginSub.textContent = subText;
+  }
+}
+
+function atualizarPreviews(config) {
+  const prevNome = document.getElementById('cfg-nome-preview');
+  const prevCrp = document.getElementById('cfg-crp-preview');
+  const prevIni = document.getElementById('cfg-foto-inicial');
+  
+  if(prevNome) prevNome.textContent = config.nome || 'Seu nome aqui';
+  if(prevCrp) prevCrp.textContent = config.registro || 'CRP 00/000000';
+  if(prevIni) prevIni.textContent = (config.nome || 'S')[0].toUpperCase();
+}
+
+function atualizarFotoEmTodosLugares(fotoUrl) {
+  // Sidebar
+  const userFoto = document.getElementById('user-foto');
+  if(userFoto) { userFoto.src = fotoUrl; userFoto.style.display = 'block'; }
+  
+  // Preview config
+  const cfgFoto = document.getElementById('cfg-foto-img');
+  const cfgIni = document.getElementById('cfg-foto-inicial');
+  if(cfgFoto) { cfgFoto.src = fotoUrl; cfgFoto.style.display = 'block'; }
+  if(cfgIni) cfgIni.style.display = 'none';
+  
+  // Login
+  const loginFoto = document.getElementById('login-foto');
+  const loginIni = document.getElementById('login-avatar-ini');
+  if(loginFoto) { loginFoto.src = fotoUrl; loginFoto.style.display = 'block'; }
+  if(loginIni) loginIni.style.display = 'none';
+  
+  // Salva no localStorage para persistência
+  localStorage.setItem('cf_foto', fotoUrl);
+}
+
+// ── SISTEMA DE CACHE INTELIGENTE ──────────────────────────────────
+const CacheSystem = {
+  memory: new Map(),
+  
+  getFromMemory(key) {
+    const cached = this.memory.get(key);
+    if (!cached) return null;
+    if (Date.now() > cached.expiry) {
+      this.memory.delete(key);
+      return null;
+    }
+    return cached.value;
+  },
+  
+  setInMemory(key, value, ttl = 300000) {
+    this.memory.set(key, {
+      value,
+      expiry: Date.now() + ttl
+    });
+  },
+  
+  getFromStorage(key) {
+    const item = localStorage.getItem(`cf_cache_${key}`);
+    if (!item) return null;
+    try {
+      const parsed = JSON.parse(item);
+      if (Date.now() > parsed.expiry) {
+        localStorage.removeItem(`cf_cache_${key}`);
+        return null;
+      }
+      return parsed.value;
+    } catch(e) {
+      return null;
+    }
+  },
+  
+  setInStorage(key, value, ttl = 3600000) {
+    localStorage.setItem(`cf_cache_${key}`, JSON.stringify({
+      value,
+      expiry: Date.now() + ttl
+    }));
+  },
+  
+  get(key) {
+    let value = this.getFromMemory(key);
+    if (value) return value;
+    
+    value = this.getFromStorage(key);
+    if (value) {
+      this.setInMemory(key, value);
+      return value;
+    }
+    
+    return null;
+  },
+  
+  set(key, value, ttl) {
+    this.setInMemory(key, value, ttl);
+    this.setInStorage(key, value, ttl);
+  },
+  
+  invalidate(key) {
+    this.memory.delete(key);
+    localStorage.removeItem(`cf_cache_${key}`);
+  },
+  
+  invalidatePattern(pattern) {
+    const regex = new RegExp(pattern);
+    
+    for (const key of this.memory.keys()) {
+      if (regex.test(key)) this.memory.delete(key);
+    }
+    
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('cf_cache_') && regex.test(k))
+      .forEach(k => localStorage.removeItem(k));
+  }
+};
     body: JSON.stringify(body)
   });
   if(!r.ok){
@@ -1705,14 +1874,14 @@ function gerarPDFProdutividade(){
   const ranking=Object.keys(contagem).sort((a,b)=>contagem[b]-contagem[a]).slice(0,5).map(id=>({pac:pacientes.find(p=>p.id==id),n:contagem[id]}));
   const maxC=Math.max(...dias30.map(d=>d.count),1);
   const bW=14,bG=3,cH=80,svgW=dias30.length*(bW+bG);
-  const barsSVG=dias30.map((d,i)=>{const h=Math.round((d.count/maxC)*cH);const x=i*(bW+bG);const y=cH-h;return `<rect x="${x}" y="${y}" width="${bW}" height="${h||2}" rx="3" fill="${d.count>0?'#7c3aed':'#e2e8f0'}" opacity="0.85"/>${d.count>0?`<text x="${x+bW/2}" y="${y-3}" text-anchor="middle" font-size="8" fill="#64748b">${d.count}</text>`:''}`; }).join('');
+  const barsSVG=dias30.map((d,i)=>{const h=Math.round((d.count/maxC)*cH);const x=i*(bW+bG);const y=cH-h;return `<rect x="${x}" y="${y}" width="${bW}" height="${h||2}" rx="3" fill="${d.count>0?'#2563EB':'#e2e8f0'}" opacity="0.85"/>${d.count>0?`<text x="${x+bW/2}" y="${y-3}" text-anchor="middle" font-size="8" fill="#64748b">${d.count}</text>`:''}`; }).join('');
   const labSVG=dias30.filter((_,i)=>i%5===0||i===dias30.length-1).map((d)=>{const i=dias30.indexOf(d);return `<text x="${i*(bW+bG)+bW/2}" y="${cH+14}" text-anchor="middle" font-size="7" fill="#94a3b8">${d.label}</text>`;}).join('');
-  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Produtividade — ${mesLabel}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:11px;line-height:1.6}.hdr{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center}.hdr-logo{font-size:22px;font-weight:900}.hdr-sub{font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-top:2px}.hdr-r{text-align:right;font-size:10px;opacity:.8;line-height:1.8}.sec{padding:18px 36px;border-bottom:1px solid #f1f5f9}.sec-t{font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}.sec-t::after{content:'';flex:1;height:1px;background:#ede9fe}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{background:#faf5ff;border:1px solid #ede9fe;border-radius:10px;padding:12px;text-align:center}.kpi-v{font-size:24px;font-weight:900;color:#6d28d9;line-height:1}.kpi-l{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-top:4px}.chart{background:#fafafa;border:1px solid #f1f5f9;border-radius:10px;padding:14px}.chart-t{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}.fg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.fi{background:#fafafa;border:1px solid #f1f5f9;border-radius:8px;padding:12px}.fi-l{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.fi-v{font-size:15px;font-weight:800}.ri{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:#faf5ff}.ftr{border-top:2px solid #7c3aed;padding:14px 36px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafafa}.al{border-top:1px solid #94a3b8;padding-top:6px;margin-top:28px;min-width:160px}.fi-info{text-align:right;font-size:9px;color:#94a3b8;line-height:1.8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Produtividade — ${mesLabel}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:11px;line-height:1.6}.hdr{background:linear-gradient(135deg,#1d4ed8,#2563EB);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center}.hdr-logo{font-size:22px;font-weight:900}.hdr-sub{font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-top:2px}.hdr-r{text-align:right;font-size:10px;opacity:.8;line-height:1.8}.sec{padding:18px 36px;border-bottom:1px solid #f1f5f9}.sec-t{font-size:10px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}.sec-t::after{content:'';flex:1;height:1px;background:#dbeafe}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{background:#faf5ff;border:1px solid #dbeafe;border-radius:10px;padding:12px;text-align:center}.kpi-v{font-size:24px;font-weight:900;color:#2563EB;line-height:1}.kpi-l{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-top:4px}.chart{background:#fafafa;border:1px solid #f1f5f9;border-radius:10px;padding:14px}.chart-t{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}.fg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.fi{background:#fafafa;border:1px solid #f1f5f9;border-radius:8px;padding:12px}.fi-l{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.fi-v{font-size:15px;font-weight:800}.ri{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:#faf5ff}.ftr{border-top:2px solid #2563EB;padding:14px 36px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafafa}.al{border-top:1px solid #94a3b8;padding-top:6px;margin-top:28px;min-width:160px}.fi-info{text-align:right;font-size:9px;color:#94a3b8;line-height:1.8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
   <div class="hdr"><div><div class="hdr-logo">${nomeClinica}</div><div class="hdr-sub">Relatório de Produtividade Clínica</div></div><div class="hdr-r"><div>${mesLabel}</div>${profNome?`<div>${profNome}</div>`:''} ${crp?`<div>${crp}</div>`:''}<div>Gerado em ${dataGeracao}</div></div></div>
   <div class="sec"><div class="sec-t">📊 Resumo do Mês</div><div class="kpis"><div class="kpi"><div class="kpi-v">${sessMes.length}</div><div class="kpi-l">Sessões realizadas</div></div><div class="kpi"><div class="kpi-v">${pacsMes.length}</div><div class="kpi-l">Pacientes atendidos</div></div><div class="kpi"><div class="kpi-v">${sessSem.length}</div><div class="kpi-l">Sessões esta semana</div></div><div class="kpi"><div class="kpi-v">${sessMes.length>0?(sessMes.length/4.3).toFixed(1):0}</div><div class="kpi-l">Média semanal</div></div></div></div>
   <div class="sec"><div class="sec-t">📈 Evolução (últimos 30 dias)</div><div class="chart"><div class="chart-t">Atendimentos por dia</div><svg width="${svgW}" height="${cH+20}" viewBox="0 0 ${svgW} ${cH+20}" style="width:100%;overflow:visible">${barsSVG}${labSVG}</svg></div></div>
-  <div class="sec"><div class="sec-t">💰 Financeiro do Mês</div><div class="fg"><div class="fi"><div class="fi-l">Total faturado</div><div class="fi-v" style="color:#6d28d9">R$ ${fatMes.toFixed(2)}</div></div><div class="fi"><div class="fi-l">Recebido</div><div class="fi-v" style="color:#059669">R$ ${pagoMes.toFixed(2)}</div></div><div class="fi"><div class="fi-l">Pendente</div><div class="fi-v" style="color:${fatMes-pagoMes>0?'#d97706':'#94a3b8'}">R$ ${(fatMes-pagoMes).toFixed(2)}</div></div></div></div>
-  ${ranking.length?`<div class="sec"><div class="sec-t">🏆 Top Pacientes do Mês</div>${ranking.map((r,i)=>`<div class="ri"><span style="font-size:10px;font-weight:800;color:#7c3aed;width:18px">#${i+1}</span><span style="flex:1;font-size:11px;font-weight:600">${r.pac?.nome||'—'}</span><div style="width:100px;height:6px;background:#ede9fe;border-radius:3px;overflow:hidden"><div style="width:${Math.round((r.n/ranking[0].n)*100)}%;height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:3px"></div></div><span style="font-size:10px;font-weight:700;color:#64748b;width:28px;text-align:right">${r.n}x</span></div>`).join('')}</div>`:''}
+  <div class="sec"><div class="sec-t">💰 Financeiro do Mês</div><div class="fg"><div class="fi"><div class="fi-l">Total faturado</div><div class="fi-v" style="color:#2563EB">R$ ${fatMes.toFixed(2)}</div></div><div class="fi"><div class="fi-l">Recebido</div><div class="fi-v" style="color:#059669">R$ ${pagoMes.toFixed(2)}</div></div><div class="fi"><div class="fi-l">Pendente</div><div class="fi-v" style="color:${fatMes-pagoMes>0?'#d97706':'#94a3b8'}">R$ ${(fatMes-pagoMes).toFixed(2)}</div></div></div></div>
+  ${ranking.length?`<div class="sec"><div class="sec-t">🏆 Top Pacientes do Mês</div>${ranking.map((r,i)=>`<div class="ri"><span style="font-size:10px;font-weight:800;color:#2563EB;width:18px">#${i+1}</span><span style="flex:1;font-size:11px;font-weight:600">${r.pac?.nome||'—'}</span><div style="width:100px;height:6px;background:#dbeafe;border-radius:3px;overflow:hidden"><div style="width:${Math.round((r.n/ranking[0].n)*100)}%;height:100%;background:linear-gradient(90deg,#2563EB,#a78bfa);border-radius:3px"></div></div><span style="font-size:10px;font-weight:700;color:#64748b;width:28px;text-align:right">${r.n}x</span></div>`).join('')}</div>`:''}
   <div class="ftr"><div><div class="al"><div style="font-size:11px;font-weight:700">${profNome}</div>${crp?`<div style="font-size:10px;color:#64748b">${crp}</div>`:''}</div></div><div class="fi-info"><div>${nomeClinica}</div><div>${dataGeracao}</div><div style="font-size:8px;color:#cbd5e1;margin-top:2px">Documento confidencial</div></div></div>
   <script>window.onload=()=>{window.print();}<\/script></body></html>`;
   const w=window.open('','_blank');
@@ -2472,6 +2641,13 @@ function renderPacientes(){
 
 function renderSessoes(){
   const div=document.getElementById('lista-sessoes');
+  // Popular filtro de pacientes
+  const filtroPacSel = document.getElementById("filtro-paciente");
+  if(filtroPacSel && pacientes.length) {
+    const valorAtual = filtroPacSel.value;
+    filtroPacSel.innerHTML = "<option value="">Todos os pacientes</option>" + pacientes.map(p => `<option value="${p.id}">${p.nome}</option>`).join("");
+    if(valorAtual) filtroPacSel.value = valorAtual;
+  }
   // Update KPI cards at top of sessions page
   const totalFat = sessoes.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
   const totalPago = sessoes.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
@@ -3067,6 +3243,351 @@ function verRelatorioInline(id){
 }
 
 function imprimirRelatorioPorId(id){
+// ═══════════════════════════════════════════════════════════════════
+// FUNÇÃO: IMPRIMIR SESSÕES FILTRADAS (SEM RELATÓRIO)
+// ═══════════════════════════════════════════════════════════════════
+
+function imprimirSessoesFiltradas() {
+  // Pega configurações do profissional
+  let cfgProf = {};
+  let cfgSis = {};
+  try { cfgProf = JSON.parse(localStorage.getItem('cf_config') || '{}'); } catch(e) {}
+  try { cfgSis = JSON.parse(localStorage.getItem('cf_sistema') || '{}'); } catch(e) {}
+  
+  const profNome = cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
+  const crp = cfgProf.registro || user.user_metadata?.crp || '';
+  const nomeClinica = cfgProf.nome_clinica || 'CatherFlow';
+  const dataGeracao = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
+  
+  // Pega filtros atuais da aba de sessões
+  const pacienteFiltro = document.getElementById('filtro-paciente')?.value || '';
+  const dataInicioFiltro = document.getElementById('filtro-data-inicio')?.value || '';
+  const dataFimFiltro = document.getElementById('filtro-data-fim')?.value || '';
+  
+  // Filtra sessões
+  let sessoesFiltradas = [...sessoes];
+  
+  if (pacienteFiltro) {
+    sessoesFiltradas = sessoesFiltradas.filter(s => s.paciente_id == pacienteFiltro);
+  }
+  
+  if (dataInicioFiltro) {
+    sessoesFiltradas = sessoesFiltradas.filter(s => s.data_sessao >= dataInicioFiltro);
+  }
+  
+  if (dataFimFiltro) {
+    sessoesFiltradas = sessoesFiltradas.filter(s => s.data_sessao <= dataFimFiltro);
+  }
+  
+  if (!sessoesFiltradas.length) {
+    toast('Nenhuma sessão encontrada com os filtros aplicados', 'orange');
+    return;
+  }
+  
+  // Ordena por data (mais recente primeiro)
+  sessoesFiltradas.sort((a,b) => (b.data_sessao||'').localeCompare(a.data_sessao||''));
+  
+  // Monta HTML do PDF
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Sessões Clínicas — ${nomeClinica}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      font-family:'Segoe UI',Arial,sans-serif; 
+      color:#1e293b; 
+      background:#fff; 
+      font-size:10.5px; 
+      line-height:1.7; 
+    }
+    
+    /* CABEÇALHO */
+    .hdr {
+      background:linear-gradient(135deg,#1d4ed8,#2563EB);
+      color:#fff;
+      padding:22px 36px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .hdr-logo { font-size:22px; font-weight:900; letter-spacing:-0.5px; }
+    .hdr-sub { 
+      font-size:10px; 
+      opacity:.75; 
+      text-transform:uppercase; 
+      letter-spacing:1px; 
+      margin-top:2px; 
+    }
+    .hdr-right { text-align:right; font-size:10px; opacity:.8; line-height:1.6; }
+    
+    /* FAIXA INFO */
+    .faixa {
+      background:#f0f9ff;
+      border-bottom:2px solid #dbeafe;
+      padding:14px 36px;
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:16px;
+    }
+    .faixa-item label {
+      font-size:8px;
+      font-weight:800;
+      color:#2563EB;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      display:block;
+      margin-bottom:3px;
+    }
+    .faixa-item span { font-size:12px; font-weight:700; color:#1e293b; }
+    
+    /* CORPO */
+    .corpo { padding:22px 36px; }
+    
+    /* TÍTULO SEÇÃO */
+    .sec-titulo {
+      font-size:13px;
+      font-weight:800;
+      color:#1e293b;
+      padding:16px 36px 12px;
+      background:#fafafa;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      border-top:2px solid #dbeafe;
+    }
+    .sec-badge {
+      background:#dbeafe;
+      color:#2563EB;
+      font-size:9px;
+      font-weight:800;
+      padding:3px 10px;
+      border-radius:20px;
+    }
+    
+    /* CARD SESSÃO */
+    .sess-card {
+      margin:0 36px 12px;
+      border:1px solid #e2e8f0;
+      border-left:4px solid #2563EB;
+      border-radius:0 8px 8px 0;
+      padding:14px 16px;
+      background:#fff;
+      page-break-inside:avoid;
+    }
+    .sess-hdr {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    .sess-num {
+      font-size:11px;
+      font-weight:800;
+      color:#2563EB;
+    }
+    .sess-pgto-pago {
+      background:#dcfce7;
+      color:#166534;
+      font-size:8px;
+      font-weight:800;
+      padding:2px 8px;
+      border-radius:10px;
+    }
+    .sess-pgto-pend {
+      background:#fef9c3;
+      color:#854d0e;
+      font-size:8px;
+      font-weight:800;
+      padding:2px 8px;
+      border-radius:10px;
+    }
+    .sess-campo {
+      margin-bottom:6px;
+    }
+    .sess-campo label {
+      font-size:8px;
+      font-weight:800;
+      color:#64748b;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      display:block;
+      margin-bottom:1px;
+    }
+    .sess-campo p {
+      font-size:10px;
+      color:#334155;
+      line-height:1.7;
+    }
+    .resumo-ia {
+      background:#f0fdf4;
+      border:1px solid #bbf7d0;
+      border-radius:6px;
+      padding:9px 12px;
+      margin-top:8px;
+    }
+    .resumo-ia strong {
+      color:#166534;
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      display:block;
+      margin-bottom:3px;
+    }
+    .resumo-ia p {
+      font-size:10px;
+      color:#1a2e1a;
+      line-height:1.7;
+    }
+    
+    /* RODAPÉ */
+    .ftr {
+      border-top:3px solid #2563EB;
+      padding:18px 36px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      background:#fafafa;
+      margin-top:8px;
+    }
+    .ass { min-width:220px; }
+    .ass-linha {
+      border-top:1px solid #94a3b8;
+      padding-top:6px;
+      margin-top:36px;
+    }
+    .ass-nome { font-size:11px; font-weight:700; color:#1e293b; }
+    .ass-reg { font-size:10px; color:#64748b; margin-top:2px; }
+    .ftr-info {
+      text-align:right;
+      font-size:9px;
+      color:#94a3b8;
+      line-height:1.8;
+    }
+    
+    @media print {
+      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .sess-card { page-break-inside:avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hdr">
+    <div>
+      <div class="hdr-logo">${nomeClinica}</div>
+      <div class="hdr-sub">Registro de Sessões Clínicas</div>
+    </div>
+    <div class="hdr-right">
+      <div>Gerado em ${dataGeracao}</div>
+      ${profNome ? `<div>${profNome}</div>` : ''}
+      ${crp ? `<div>${crp}</div>` : ''}
+    </div>
+  </div>
+
+  <div class="faixa">
+    ${pacienteFiltro ? `<div class="faixa-item">
+      <label>Paciente</label>
+      <span>${pacientes.find(p => p.id == pacienteFiltro)?.nome || '—'}</span>
+    </div>` : ''}
+    ${dataInicioFiltro || dataFimFiltro ? `<div class="faixa-item">
+      <label>Período</label>
+      <span>${dataInicioFiltro ? new Date(dataInicioFiltro+'T12:00:00').toLocaleDateString('pt-BR') : 'Início'} a ${dataFimFiltro ? new Date(dataFimFiltro+'T12:00:00').toLocaleDateString('pt-BR') : 'Hoje'}</span>
+    </div>` : ''}
+    <div class="faixa-item">
+      <label>Total de Sessões</label>
+      <span>${sessoesFiltradas.length}</span>
+    </div>
+    <div class="faixa-item">
+      <label>Profissional</label>
+      <span>${profNome || '—'}</span>
+    </div>
+    ${crp ? `<div class="faixa-item"><label>Registro</label><span>${crp}</span></div>` : ''}
+  </div>
+
+  <div class="sec-titulo">
+    📚 Sessões Registradas
+    <span class="sec-badge">${sessoesFiltradas.length} ${sessoesFiltradas.length === 1 ? 'sessão' : 'sessões'}</span>
+  </div>
+
+  ${sessoesFiltradas.map((s, i) => {
+    const pac = pacientes.find(p => p.id == s.paciente_id);
+    const dataH = s.data_sessao ? new Date(s.data_sessao + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'}) : '—';
+    const hrH = s.horario && s.horario !== '00:00:00' ? s.horario.substring(0,5) : '';
+    
+    return `<div class="sess-card">
+      <div class="sess-hdr">
+        <div class="sess-num">
+          Sessão ${s.numero_sessao || i+1} 
+          &nbsp;·&nbsp; 
+          ${pac?.nome || 'Paciente #' + s.paciente_id}
+          &nbsp;·&nbsp; 
+          ${dataH}
+          ${hrH ? ' &nbsp;·&nbsp; ' + hrH : ''}
+        </div>
+        ${s.status_pagamento ? `<span class="${s.status_pagamento === 'pago' ? 'sess-pgto-pago' : 'sess-pgto-pend'}">
+          ${s.status_pagamento === 'pago' ? '✓ Pago' : '⏳ Pendente'}
+        </span>` : ''}
+      </div>
+      ${s.queixas_principais ? `<div class="sess-campo">
+        <label>Queixas Apresentadas</label>
+        <p>${s.queixas_principais.replace(/\n/g, '<br>')}</p>
+      </div>` : ''}
+      ${s.intervencoes ? `<div class="sess-campo">
+        <label>Intervenções Realizadas</label>
+        <p>${s.intervencoes.replace(/\n/g, '<br>')}</p>
+      </div>` : ''}
+      ${s.evolucao ? `<div class="sess-campo">
+        <label>Evolução Observada</label>
+        <p>${s.evolucao.replace(/\n/g, '<br>')}</p>
+      </div>` : ''}
+      ${s.pontos_atencao ? `<div class="sess-campo">
+        <label>Pontos de Atenção</label>
+        <p>${s.pontos_atencao.replace(/\n/g, '<br>')}</p>
+      </div>` : ''}
+      ${s.proximos_passos ? `<div class="sess-campo">
+        <label>Próximos Passos</label>
+        <p>${s.proximos_passos.replace(/\n/g, '<br>')}</p>
+      </div>` : ''}
+      ${s.resumo_ia ? `<div class="resumo-ia">
+        <strong>🤖 Análise IA</strong>
+        <p>${s.resumo_ia.replace(/\n/g, '<br>')}</p>
+      </div>` : ''}
+    </div>`;
+  }).join('')}
+
+  <div class="ftr">
+    <div class="ass">
+      <div class="ass-linha">
+        <div class="ass-nome">${profNome}</div>
+        ${crp ? `<div class="ass-reg">${crp}</div>` : ''}
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div class="ass-linha" style="min-width:200px">
+        <div class="ass-reg">Assinatura</div>
+      </div>
+    </div>
+    <div class="ftr-info">
+      <div>Documento gerado pelo ${nomeClinica}</div>
+      <div>${dataGeracao}</div>
+      <div style="font-size:8px;color:#cbd5e1;margin-top:2px">Documento confidencial — uso clínico exclusivo</div>
+    </div>
+  </div>
+
+  <script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    toast('Permita popups para imprimir', 'orange');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+}
   const rel = window._relatoriosSalvos?.find(r=>r.id===id);
   if(rel){ window._relAtual = {...rel, secoes:{
     s1_visao_geral:rel.s1_visao_geral,s2_melhorou:rel.s2_melhorou,
@@ -3928,14 +4449,14 @@ function imprimirRelatorio(){
     body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:10.5px;line-height:1.7}
 
     /* CABEÇALHO */
-    .hdr{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;padding:22px 36px;display:flex;justify-content:space-between;align-items:center}
+    .hdr{background:linear-gradient(135deg,#1d4ed8,#2563EB);color:#fff;padding:22px 36px;display:flex;justify-content:space-between;align-items:center}
     .hdr-logo{font-size:22px;font-weight:900;letter-spacing:-0.5px}
     .hdr-sub{font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
     .hdr-right{text-align:right;font-size:10px;opacity:.8;line-height:1.6}
 
     /* FAIXA PACIENTE */
-    .faixa{background:#f5f3ff;border-bottom:2px solid #ddd6fe;padding:14px 36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px}
-    .faixa-item label{font-size:8px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px}
+    .faixa{background:#f5f3ff;border-bottom:2px solid #dbeafe;padding:14px 36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px}
+    .faixa-item label{font-size:8px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px}
     .faixa-item span{font-size:12px;font-weight:700;color:#1e293b}
 
     /* CORPO */
@@ -3943,19 +4464,19 @@ function imprimirRelatorio(){
 
     /* SEÇÕES */
     .sec{display:flex;gap:14px;margin-bottom:16px;page-break-inside:avoid}
-    .sec-num{font-size:22px;font-weight:900;color:#ddd6fe;line-height:1;flex-shrink:0;width:24px;text-align:right}
-    .sec-body{flex:1;border-left:3px solid #ede9fe;padding-left:14px}
-    .sec-titulo{font-size:10px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+    .sec-num{font-size:22px;font-weight:900;color:#dbeafe;line-height:1;flex-shrink:0;width:24px;text-align:right}
+    .sec-body{flex:1;border-left:3px solid #dbeafe;padding-left:14px}
+    .sec-titulo{font-size:10px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
     .sec-texto{font-size:10.5px;line-height:1.8;color:#334155;text-align:justify}
     .sec-lista{padding-left:16px;margin:0}
     .sec-lista li{font-size:10.5px;line-height:1.9;color:#334155}
 
     /* HISTÓRICO */
-    .hist-titulo{font-size:13px;font-weight:800;color:#1e293b;padding:16px 36px 12px;border-top:2px solid #ede9fe;background:#fafafa;display:flex;align-items:center;gap:10px}
-    .hist-badge{background:#ede9fe;color:#6d28d9;font-size:9px;font-weight:800;padding:3px 10px;border-radius:20px}
-    .hist-card{margin:0 36px 12px;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:14px 16px;background:#fff;page-break-inside:avoid}
+    .hist-titulo{font-size:13px;font-weight:800;color:#1e293b;padding:16px 36px 12px;border-top:2px solid #dbeafe;background:#fafafa;display:flex;align-items:center;gap:10px}
+    .hist-badge{background:#dbeafe;color:#2563EB;font-size:9px;font-weight:800;padding:3px 10px;border-radius:20px}
+    .hist-card{margin:0 36px 12px;border:1px solid #e2e8f0;border-left:4px solid #2563EB;border-radius:0 8px 8px 0;padding:14px 16px;background:#fff;page-break-inside:avoid}
     .hist-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .hist-num{font-size:11px;font-weight:800;color:#4c1d95}
+    .hist-num{font-size:11px;font-weight:800;color:#1d4ed8}
     .hist-pgto-pago{background:#dcfce7;color:#166534;font-size:8px;font-weight:800;padding:2px 8px;border-radius:10px}
     .hist-pgto-pend{background:#fef9c3;color:#854d0e;font-size:8px;font-weight:800;padding:2px 8px;border-radius:10px}
     .hist-campo{margin-bottom:6px}
@@ -3966,7 +4487,7 @@ function imprimirRelatorio(){
     .resumo-ia p{font-size:10px;color:#1a2e1a;line-height:1.7}
 
     /* RODAPÉ */
-    .ftr{border-top:3px solid #7c3aed;padding:18px 36px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafafa;margin-top:8px}
+    .ftr{border-top:3px solid #2563EB;padding:18px 36px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafafa;margin-top:8px}
     .ass{min-width:220px}
     .ass-linha{border-top:1px solid #94a3b8;padding-top:6px;margin-top:36px}
     .ass-nome{font-size:11px;font-weight:700;color:#1e293b}
@@ -4154,7 +4675,11 @@ async function previewFoto(input){
 
   // Preview imediato local
   const reader=new FileReader();
-  reader.onload=e=>aplicarFoto(e.target.result);
+  reader.onload=e=>{
+    const dataUrl = e.target.result;
+    // ✅ ATUALIZA TODOS OS LUGARES IMEDIATAMENTE
+    atualizarFotoEmTodosLugares(dataUrl);
+  };
   reader.readAsDataURL(file);
 
   // Upload para Supabase Storage
@@ -4189,8 +4714,8 @@ async function previewFoto(input){
       body:JSON.stringify({id:user.id, avatar_url:publicUrl})
     });
 
-    localStorage.setItem('cf_foto',publicUrl);
-    aplicarFoto(publicUrl);
+    // ✅ DISPARA EVENTO PARA ATUALIZAR TUDO
+    EventBus.emit('foto:updated', publicUrl);
     toast('✅ Foto salva na nuvem!');
   }catch(e){
     toast('Foto salva localmente (erro no upload: '+e.message+')','orange');
@@ -4271,16 +4796,16 @@ async function salvarConfig(){
       toast('✅ Salvo localmente! (banco: '+( err.message||err.details||r.status)+')','orange');
     } else {
       toast('✅ Identidade salva com sucesso!');
-      verificarPerfilCompleto(); // esconde o banner se perfil está completo
+      verificarPerfilCompleto();
+      // ✅ DISPARA EVENTO PARA ATUALIZAR TUDO EM TEMPO REAL
+      EventBus.emit('config:updated', { nome, registro, clinica, foto });
     }
   } catch(e){
     console.warn('Config save offline:', e);
     toast('✅ Salvo localmente!');
+    // ✅ DISPARA EVENTO MESMO EM ERRO (dados salvos no localStorage)
+    EventBus.emit('config:updated', { nome, registro, clinica, foto });
   }
-  atualizarPreview();
-  // Atualiza sidebar
-  document.getElementById('user-name').textContent = nome || user.user_metadata?.nome || user.email.split('@')[0];
-  if(registro) document.getElementById('user-role').textContent = registro;
 }
 
 function salvarVisual(){
