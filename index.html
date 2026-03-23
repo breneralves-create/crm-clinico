@@ -574,19 +574,6 @@ body.light thead th{background:var(--bg3)}
       <div class="logo-icon">🧠</div>
       <div class="logo-text"><strong>CatherFlow</strong><span>Gestão Clínica</span></div>
     </div>
-    <!-- Badge do plano na sidebar -->
-    <div id="sidebar-plano-badge" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:10px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2)">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:9px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1px">Plano</div>
-          <div id="sidebar-plano-nome" style="font-size:12px;font-weight:700;color:var(--p3)">—</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:9px;color:var(--text4)">Relatórios/mês</div>
-          <div id="sidebar-rel-counter" style="font-size:11px;font-weight:700;color:var(--text3)">—</div>
-        </div>
-      </div>
-    </div>
     <div class="nav-section">Principal</div>
     <div class="nav-item active" onclick="nav('dashboard',this)">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
@@ -860,6 +847,8 @@ body.light thead th{background:var(--bg3)}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;flex-wrap:wrap" id="rel-controles">
         <div class="field" style="margin:0">
           <label>Paciente</label>
+          <input type="text" id="rel-pac-busca" placeholder="🔍 Buscar paciente..." oninput="filtrarSelectPacRelatorio()" autocomplete="off"
+            style="width:100%;padding:9px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:13px 'Sora';box-sizing:border-box;outline:none;margin-bottom:6px;display:block">
           <select id="rel-pac-sel" onchange="carregarSessoesParaRelatorio()" style="width:100%">
             <option value="">Selecione um paciente...</option>
           </select>
@@ -867,9 +856,8 @@ body.light thead th{background:var(--bg3)}
         <div class="field" style="margin:0">
           <label>Filtrar por período</label>
           <select id="rel-periodo-sel" onchange="filtrarSessoesRelatorio()" style="width:100%">
-            <option value="tudo">Todo o histórico</option>
-            <option value="semana">Esta semana</option>
-            <option value="mes" selected>Este mês</option>
+            <option value="tudo" selected>Todo o histórico</option>
+            <option value="mes">Este mês</option>
             <option value="trimestre">Últimos 3 meses</option>
             <option value="semestre">Últimos 6 meses</option>
             <option value="ano">Último ano</option>
@@ -925,21 +913,16 @@ body.light thead th{background:var(--bg3)}
         <div id="area-relatorio" class="card"></div>
       </div>
 
-      <!-- View principal de relatórios -->
+      <!-- Histórico de relatórios gerados -->
       <div id="rel-view-pacientes">
-        <!-- Busca de pacientes para relatório rápido -->
-        <div style="display:flex;gap:10px;margin-bottom:14px">
-          <input type="text" id="rel-busca-pac" placeholder="🔍 Buscar paciente..." oninput="renderCardsPacientesRel()"
-            style="flex:1;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:14px 'Sora';outline:none">
-        </div>
-        <div id="rel-cards-pacientes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:24px"></div>
-
-        <!-- Histórico de relatórios gerados -->
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;margin-top:8px">
           <div style="font-size:14px;font-weight:800;color:var(--text)">📚 Relatórios Gerados</div>
           <div style="flex:1;height:1px;background:var(--border)"></div>
           <button class="btn-sm" onclick="carregarRelatorios()">↻ Atualizar</button>
         </div>
+        <!-- IDs mantidos para compatibilidade com funções existentes -->
+        <div id="rel-busca-pac" style="display:none"></div>
+        <div id="rel-cards-pacientes" style="display:none"></div>
         <div id="lista-relatorios">
           <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
         </div>
@@ -949,39 +932,37 @@ body.light thead th{background:var(--bg3)}
     <!-- ── FINANCEIRO ────────────────────────────────────── -->
     <div id="page-financeiro" class="page">
       <div class="page-header">
-        <h1>Financeiro <span id="fin-periodo-label"></span></h1>
+        <h1>Financeiro <span id="fin-periodo-label" style="font-weight:400;color:var(--text3);font-size:16px"></span></h1>
         <div class="hactions">
           <select id="fin-filtro-mes" onchange="renderFinanceiro()" style="padding:9px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:600 13px 'Sora';cursor:pointer">
           </select>
         </div>
       </div>
 
-      <!-- KPIs financeiros -->
+      <!-- KPIs: faturado, recebido, pendente (oculto se zero) -->
       <div class="kpi-grid" style="margin-bottom:20px">
-        <div class="kpi-card"><div class="kpi-label">💰 Receita Total</div><div class="kpi-value">R$<span id="fin-kpi-total">0</span></div><div class="kpi-sub" id="fin-kpi-sessoes-label">0 sessões</div></div>
+        <div class="kpi-card"><div class="kpi-label">💰 Faturado</div><div class="kpi-value">R$<span id="fin-kpi-total">0</span></div><div class="kpi-sub" id="fin-kpi-sessoes-label"></div></div>
         <div class="kpi-card"><div class="kpi-label">✅ Recebido</div><div class="kpi-value" style="color:var(--accent)">R$<span id="fin-kpi-pago">0</span></div><div class="kpi-sub up" id="fin-kpi-pago-pct"></div></div>
-        <div class="kpi-card"><div class="kpi-label">⏳ Pendente</div><div class="kpi-value" style="color:var(--warn)">R$<span id="fin-kpi-pendente">0</span></div><div class="kpi-sub" id="fin-kpi-pendente-qt"></div></div>
-        <div class="kpi-card"><div class="kpi-label">📊 Ticket Médio</div><div class="kpi-value" style="font-size:22px">R$<span id="fin-kpi-ticket">0</span></div><div class="kpi-sub">por sessão</div></div>
+        <div class="kpi-card" id="fin-kpi-card-pendente"><div class="kpi-label">⏳ Pendente</div><div class="kpi-value" style="color:var(--warn)">R$<span id="fin-kpi-pendente">0</span></div><div class="kpi-sub" id="fin-kpi-pendente-qt"></div></div>
       </div>
+      <span id="fin-kpi-ticket" style="display:none"></span>
 
       <!-- Extrato por paciente -->
       <div class="card">
         <div class="card-title" style="justify-content:space-between">
           <span>💳 Extrato por Paciente</span>
-          <div style="display:flex;gap:8px">
-            <select id="fin-filtro-pgto" onchange="renderFinanceiro()" style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font:13px 'Sora';cursor:pointer">
-              <option value="">Todos</option>
-              <option value="pago">✅ Pagos</option>
-              <option value="pendente">⏳ Pendentes</option>
-            </select>
-          </div>
+          <select id="fin-filtro-pgto" onchange="renderFinanceiro()" style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font:13px 'Sora';cursor:pointer">
+            <option value="">Todos</option>
+            <option value="pago">✅ Pagos</option>
+            <option value="pendente">⏳ Pendentes</option>
+          </select>
         </div>
         <div id="fin-extrato-pacientes"></div>
       </div>
 
-      <!-- Sessões pendentes de pagamento -->
-      <div class="card" id="fin-card-pendentes" style="margin-top:16px">
-        <div class="card-title">⚠️ Sessões Pendentes de Pagamento</div>
+      <!-- Pendentes — só aparece se houver -->
+      <div class="card" id="fin-card-pendentes" style="margin-top:16px;display:none">
+        <div class="card-title">⚠️ Pendentes de Pagamento</div>
         <div id="fin-lista-pendentes"></div>
       </div>
     </div>
@@ -1000,36 +981,33 @@ body.light thead th{background:var(--bg3)}
         <button class="cfg-tab active" onclick="cfgTab('identidade',this)">👤 Identidade</button>
         <button class="cfg-tab" onclick="cfgTab('visual',this)">🎨 Visual</button>
         <button class="cfg-tab" onclick="cfgTab('sistema',this)">⚙️ Sistema</button>
-        <button class="cfg-tab" onclick="cfgTab('plano',this);renderAbaPlano()">💳 Meu Plano</button>
+
       </div>
 
       <!-- ABA IDENTIDADE -->
       <div id="cfg-identidade" class="cfg-panel">
-        <!-- Foto do profissional -->
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-title">🖼️ Foto do Profissional</div>
-          <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-            <div style="position:relative">
-              <div id="cfg-foto-preview" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;border:3px solid rgba(124,58,237,.4);overflow:hidden">
+        <div class="card" style="max-width:640px">
+          <!-- Foto -->
+          <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+            <div style="position:relative;flex-shrink:0">
+              <div id="cfg-foto-preview" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;overflow:hidden">
                 <span id="cfg-foto-inicial">?</span>
                 <img id="cfg-foto-img" style="width:100%;height:100%;object-fit:cover;display:none" alt="Foto">
               </div>
-              <label for="cfg-foto-input" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--p1);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;border:2px solid var(--bg2)">📷</label>
+              <label for="cfg-foto-input" style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--p1);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;border:2px solid var(--bg2)">📷</label>
               <input type="file" id="cfg-foto-input" accept="image/*" style="display:none" onchange="previewFoto(this)">
             </div>
             <div>
-              <div style="font-size:14px;font-weight:700;margin-bottom:4px" id="cfg-nome-preview">Seu nome aqui</div>
+              <div style="font-size:14px;font-weight:700" id="cfg-nome-preview">Seu nome aqui</div>
               <div style="font-size:12px;color:var(--text3)" id="cfg-crp-preview">CRP 00/000000</div>
-              <div style="font-size:11px;color:var(--text3);margin-top:8px">JPG ou PNG · Máx 2MB<br>Aparece no login e na sidebar</div>
+              <div style="font-size:11px;color:var(--text4);margin-top:4px">JPG ou PNG · Máx 2MB</div>
             </div>
           </div>
-        </div>
-
-        <!-- Dados da clínica + profissional -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-          <div class="card">
-            <div class="card-title">🏥 Dados da Clínica</div>
-            <div class="field"><label>Nome da Clínica</label><input type="text" id="cfg-clinica" placeholder="Ex: Clínica Mente Plena" oninput="atualizarPreview()"></div>
+          <!-- Campos -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+            <div class="field"><label>Nome Completo</label><input type="text" id="cfg-nome" placeholder="Dra. Nome Sobrenome" oninput="atualizarPreview()"></div>
+            <div class="field"><label>Nome da Clínica</label><input type="text" id="cfg-clinica" placeholder="Clínica Mente Plena" oninput="atualizarPreview()"></div>
+            <div class="field"><label>Registro (CRP / CRN)</label><input type="text" id="cfg-registro" placeholder="CRP 00/000000" oninput="atualizarPreview()"></div>
             <div class="field">
               <label>Tipo de Profissional</label>
               <select id="cfg-tipo">
@@ -1042,53 +1020,46 @@ body.light thead th{background:var(--bg3)}
                 <option value="Outro">Outro</option>
               </select>
             </div>
-            <div class="field"><label>Bio / Descrição</label><textarea id="cfg-bio" placeholder="Uma breve descrição da sua clínica..." style="min-height:70px"></textarea></div>
-            <div class="field"><label>Endereço</label><input type="text" id="cfg-endereco" placeholder="Rua, número, cidade"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">👩‍⚕️ Dados da Profissional</div>
-            <div class="field"><label>Nome Completo</label><input type="text" id="cfg-nome" placeholder="Dra. Nome Sobrenome" oninput="atualizarPreview()"></div>
-            <div class="field"><label>Registro (CRP / CRN)</label><input type="text" id="cfg-registro" placeholder="CRP 00/000000" oninput="atualizarPreview()"></div>
             <div class="field"><label>WhatsApp</label><input type="tel" id="cfg-whatsapp" placeholder="(31) 99999-9999"></div>
             <div class="field"><label>Instagram</label><input type="text" id="cfg-instagram" placeholder="@suaclinica"></div>
-            <div class="field"><label>Site</label><input type="url" id="cfg-site" placeholder="www.suaclinica.com.br"></div>
           </div>
+          <div class="field" style="margin-bottom:16px"><label>Endereço</label><input type="text" id="cfg-endereco" placeholder="Rua, número, cidade"></div>
+          <!-- Bio removida — raramente usada e aumenta ruído -->
+          <input type="hidden" id="cfg-bio">
+          <input type="hidden" id="cfg-site">
+          <button class="btn-primary" onclick="salvarConfig()" style="width:auto;padding:10px 24px">💾 Salvar</button>
         </div>
-        <button class="btn-primary" onclick="salvarConfig()" style="width:auto;padding:12px 28px">💾 Salvar Identidade</button>
       </div>
 
       <!-- ABA VISUAL -->
       <div id="cfg-visual" class="cfg-panel" style="display:none">
-        <div class="card" style="max-width:600px">
-          <div class="card-title">🎨 Aparência do Sistema</div>
-
-          <div style="margin-bottom:24px">
-            <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Tema</div>
-            <div style="display:flex;gap:12px">
+        <div class="card" style="max-width:480px">
+          <div class="card-title">🎨 Aparência</div>
+          <div style="margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Tema</div>
+            <div style="display:flex;gap:10px">
               <div class="tema-card active" id="tema-escuro" onclick="setTema('escuro')">
-                <div style="width:100%;height:48px;background:linear-gradient(135deg,#0f0a1e,#1a0f3a);border-radius:8px;margin-bottom:8px;border:2px solid var(--p1)"></div>
+                <div style="width:100%;height:40px;background:linear-gradient(135deg,#0f0a1e,#1a0f3a);border-radius:8px;margin-bottom:6px;border:2px solid var(--p1)"></div>
                 <div style="font-size:12px;font-weight:700;text-align:center">🌙 Escuro</div>
               </div>
               <div class="tema-card" id="tema-claro" onclick="setTema('claro')">
-                <div style="width:100%;height:48px;background:linear-gradient(135deg,#f8fafc,#e2e8f0);border-radius:8px;margin-bottom:8px;border:2px solid var(--border)"></div>
+                <div style="width:100%;height:40px;background:linear-gradient(135deg,#f8fafc,#e2e8f0);border-radius:8px;margin-bottom:6px;border:2px solid var(--border)"></div>
                 <div style="font-size:12px;font-weight:700;text-align:center">☀️ Claro</div>
               </div>
             </div>
           </div>
-
-          <div style="margin-bottom:24px">
-            <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Cor de Destaque</div>
+          <div style="margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Cor de Destaque</div>
             <div id="cfg-cores-container" style="display:flex;gap:10px;flex-wrap:wrap"></div>
           </div>
-
-          <button class="btn-primary" onclick="salvarVisual()" style="width:auto;padding:12px 28px">💾 Salvar Visual</button>
+          <button class="btn-primary" onclick="salvarVisual()" style="width:auto;padding:10px 24px">💾 Salvar</button>
         </div>
       </div>
 
       <!-- ABA SISTEMA -->
       <div id="cfg-sistema" class="cfg-panel" style="display:none">
-        <div class="card" style="max-width:600px">
-          <div class="card-title">⚙️ Configurações do Sistema</div>
+        <div class="card" style="max-width:480px">
+          <div class="card-title">⚙️ Sistema</div>
           <div class="field"><label>Valor Padrão da Sessão (R$)</label><input type="number" id="cfg-valor" placeholder="150.00" step="0.01"></div>
           <div class="field">
             <label>Duração Padrão da Sessão</label>
@@ -1099,8 +1070,8 @@ body.light thead th{background:var(--bg3)}
               <option value="90">90 minutos</option>
             </select>
           </div>
-          <div class="field">
-            <label>Notificações de Lembrete</label>
+          <div class="field" style="margin-bottom:16px">
+            <label>Lembrete de Sessão</label>
             <select id="cfg-notif">
               <option value="desativado">Desativado</option>
               <option value="1h">1 hora antes</option>
@@ -1108,34 +1079,11 @@ body.light thead th{background:var(--bg3)}
               <option value="48h">48 horas antes</option>
             </select>
           </div>
-          <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:14px;margin-bottom:16px">
-            <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px">🔗 Webhooks N8N</div>
-            <div style="font-size:11px;color:var(--text3);line-height:1.8">
-              Sessão: <code style="color:var(--p4);font-size:10px">catherflow/registrar-sessao</code><br>
-              Relatório: <code style="color:var(--p4);font-size:10px">catherflow/gerar-relatorio</code><br>
-              Paciente: <code style="color:var(--p4);font-size:10px">catherflow/cadastrar-paciente</code>
-            </div>
-          </div>
-          <button class="btn-primary" onclick="salvarSistema()" style="width:auto;padding:12px 28px">💾 Salvar Sistema</button>
+          <button class="btn-primary" onclick="salvarSistema()" style="width:auto;padding:10px 24px">💾 Salvar</button>
         </div>
       </div>
 
-      <!-- ABA MEU PLANO -->
-      <div id="cfg-plano" class="cfg-panel" style="display:none">
-        <div class="card" style="max-width:600px">
-          <div class="card-title">💳 Meu Plano</div>
-          <div id="cfg-plano-body">
-            <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
-          </div>
-        </div>
-        <!-- Histórico de relatórios -->
-        <div class="card" style="max-width:600px;margin-top:16px">
-          <div class="card-title">📊 Uso este mês</div>
-          <div id="cfg-uso-body">
-            <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
-          </div>
-        </div>
-      </div>
+
     </div>
 
   </main>
@@ -1153,6 +1101,7 @@ body.light thead th{background:var(--bg3)}
     <div id="sd-body"></div>
     <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
       <button class="btn-primary" onclick="fecharModal('modal-sessao-detalhe');abrirEditarSessao(sessaoAtual?.id)" style="padding:8px 16px">✏️ Editar Sessão</button>
+      <button class="btn-sm" onclick="imprimirSessaoIndividual(sessaoAtual?.id)">🖨️ Imprimir</button>
       <button class="btn-sm" onclick="fecharModal('modal-sessao-detalhe');if(sessaoAtual)abrirDetalhePaciente(sessaoAtual.paciente_id)">👤 Ver Paciente</button>
       <button class="btn-success" id="btn-marcar-pago-detalhe" onclick="marcarSessaoPagaDetalhe()" style="padding:8px 16px;display:none">✅ Marcar Pago</button>
       <button class="btn-danger" onclick="excluirSessaoAtual()" style="margin-left:auto">Excluir</button>
@@ -1711,10 +1660,25 @@ let _sessoesRelatorio=[], _sessSelecionadas=new Set();
 function iniciarPaginaRelatorios(){
   const sel=document.getElementById('rel-pac-sel');
   if(!sel) return;
-  const pacsComSessao=pacientes.filter(p=>sessoes.some(s=>s.paciente_id==p.id));
+  // Todos os pacientes ativos — não filtra por sessão para não perder ninguém
+  const pacsAtivos=pacientes.filter(p=>p.ativo!==false).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   sel.innerHTML='<option value="">Selecione um paciente...</option>'+
-    pacsComSessao.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+    pacsAtivos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  const buscaEl=document.getElementById('rel-pac-busca');
+  if(buscaEl) buscaEl.value='';
   renderProdutividade();
+}
+
+function filtrarSelectPacRelatorio(){
+  const busca=(document.getElementById('rel-pac-busca')?.value||'').toLowerCase();
+  const sel=document.getElementById('rel-pac-sel');
+  if(!sel) return;
+  const pacsAtivos=pacientes.filter(p=>p.ativo!==false).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  const filtrados=pacsAtivos.filter(p=>(p.nome||'').toLowerCase().includes(busca));
+  const anterior=sel.value;
+  sel.innerHTML='<option value="">Selecione um paciente...</option>'+
+    filtrados.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  if(anterior && filtrados.some(p=>String(p.id)===anterior)) sel.value=anterior;
 }
 
 function renderProdutividade(){
@@ -1756,23 +1720,24 @@ function carregarSessoesParaRelatorio(){
 
 function filtrarSessoesRelatorio(){
   const pacId=document.getElementById('rel-pac-sel')?.value;
-  const periodo=document.getElementById('rel-periodo-sel')?.value||'mes';
+  const periodo=document.getElementById('rel-periodo-sel')?.value||'tudo';
   const customDiv=document.getElementById('rel-custom-datas');
   if(periodo==='custom'){ if(customDiv) customDiv.style.display='grid'; }
   else{ if(customDiv) customDiv.style.display='none'; }
   if(!pacId) return;
   const hoje=new Date();
   let iniStr='2000-01-01';
-  const fimStr=localDateStr(hoje);
-  if(periodo==='semana'){ const d=new Date(hoje);d.setDate(hoje.getDate()-7);iniStr=localDateStr(d); }
-  else if(periodo==='mes'){ const d=new Date(hoje);d.setMonth(hoje.getMonth()-1);iniStr=localDateStr(d); }
+  // Para "tudo", fim aberto (inclui sessões futuras/agendadas)
+  let fimStr='9999-12-31';
+  if(periodo!=='tudo') fimStr=localDateStr(hoje);
+  if(periodo==='mes'){ const d=new Date(hoje);d.setMonth(hoje.getMonth()-1);iniStr=localDateStr(d); }
   else if(periodo==='trimestre'){ const d=new Date(hoje);d.setMonth(hoje.getMonth()-3);iniStr=localDateStr(d); }
   else if(periodo==='semestre'){ const d=new Date(hoje);d.setMonth(hoje.getMonth()-6);iniStr=localDateStr(d); }
   else if(periodo==='ano'){ const d=new Date(hoje);d.setFullYear(hoje.getFullYear()-1);iniStr=localDateStr(d); }
   else if(periodo==='custom'){
     iniStr=document.getElementById('rel-data-ini')?.value||'2000-01-01';
-    const fimC=document.getElementById('rel-data-fim')?.value;
-    _sessoesRelatorio=sessoes.filter(s=>s.paciente_id==pacId&&s.data_sessao>=iniStr&&(!fimC||s.data_sessao<=fimC))
+    const fimC=document.getElementById('rel-data-fim')?.value||'9999-12-31';
+    _sessoesRelatorio=sessoes.filter(s=>s.paciente_id==pacId&&s.data_sessao>=iniStr&&s.data_sessao<=fimC)
       .sort((a,b)=>b.data_sessao.localeCompare(a.data_sessao));
     _sessSelecionadas=new Set(_sessoesRelatorio.map(s=>s.id));
     renderCheckboxSessoes(); return;
@@ -1786,11 +1751,32 @@ function filtrarSessoesRelatorio(){
 
 function renderCheckboxSessoes(){
   const div=document.getElementById('rel-sessoes-lista-sel');
+  const pacId=document.getElementById('rel-pac-sel')?.value;
+  const pacObj=pacId?pacientes.find(p=>String(p.id)===String(pacId)):null;
+  // Cabeçalho do paciente com idade
+  let headerPac='';
+  if(pacObj){
+    let idadeStr='';
+    if(pacObj.data_nascimento){
+      const nasc=new Date(pacObj.data_nascimento+'T12:00:00');
+      const hoje=new Date();
+      const anos=hoje.getFullYear()-nasc.getFullYear()-((hoje.getMonth()<nasc.getMonth()||(hoje.getMonth()===nasc.getMonth()&&hoje.getDate()<nasc.getDate()))?1:0);
+      idadeStr=`${anos} anos`;
+    }
+    const totalSessPac=sessoes.filter(s=>s.paciente_id==pacObj.id).length;
+    headerPac=`<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:12px;margin-bottom:14px">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex-shrink:0">${(pacObj.nome||'?')[0].toUpperCase()}</div>
+      <div>
+        <div style="font-weight:800;font-size:14px">${pacObj.nome}</div>
+        <div style="font-size:11px;color:var(--text3)">${idadeStr?idadeStr+' · ':''}${totalSessPac} sessões no total${pacObj.telefone?' · '+pacObj.telefone:''}</div>
+      </div>
+    </div>`;
+  }
   if(!_sessoesRelatorio.length){
-    div.innerHTML='<div class="empty"><span class="empty-icon">📭</span><p>Nenhuma sessão neste período</p></div>';
+    div.innerHTML=headerPac+'<div class="empty"><span class="empty-icon">📭</span><p>Nenhuma sessão neste período</p></div>';
     atualizarBarraSel(); return;
   }
-  div.innerHTML=_sessoesRelatorio.map(s=>{
+  div.innerHTML=headerPac+_sessoesRelatorio.map(s=>{
     const sel=_sessSelecionadas.has(s.id);
     return `<div id="rel-card-${s.id}" onclick="toggleSessaoRel(${s.id})" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:12px;border:2px solid ${sel?'var(--p1)':'var(--border)'};background:${sel?'rgba(37,99,235,.06)':'var(--card)'};margin-bottom:8px;cursor:pointer;transition:all .2s">
       <div id="chk-${s.id}" style="width:22px;height:22px;border-radius:6px;flex-shrink:0;margin-top:2px;border:2px solid ${sel?'var(--p1)':'var(--border)'};background:${sel?'var(--p1)':'transparent'};display:flex;align-items:center;justify-content:center;transition:all .2s">${sel?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>':''}</div>
@@ -1862,7 +1848,14 @@ async function gerarRelatorioSelecionadas(){
     if(!d.success) throw new Error(d.mensagem||'Erro ao gerar relatório');
     await incrementarContadorRelatorio();
     toast('✅ Relatório gerado com sucesso!');
+    // Aguarda carregarRelatorios para garantir que _relatoriosSalvos está atualizado
     await carregarRelatorios();
+    const relatorioId = d.relatorio_id;
+    if(relatorioId){
+      const rel = window._relatoriosSalvos?.find(r=>r.id===relatorioId);
+      if(rel) verRelatorio(relatorioId);
+      else if(window._relatoriosSalvos?.[0]) verRelatorio(window._relatoriosSalvos[0].id);
+    }
   }catch(e){ toast('Erro: '+e.message,'red'); await carregarRelatorios(); }
 }
 
@@ -2114,7 +2107,12 @@ async function carregarPlanoUsuario() {
       return null;
     }
     usuarioDB = data[0];
-    planoAtual = data[0].t1_planos || null;
+    planoAtual = data[0].t1_planos || {
+      id: PLANO_IDS.GRATUITO,
+      nome: 'Gratuito',
+      preco_mensal: 0,
+      limite_relatorios: 2
+    };
     console.log('planoAtual:', JSON.stringify(planoAtual));
     return usuarioDB;
   } catch(e) {
@@ -2166,24 +2164,7 @@ function mostrarBloqueio(motivo, usuarioDB) {
   }
 }
 
-function atualizarBadgePlano() {
-  if (!planoAtual || !usuarioDB) return;
-  const badge = document.getElementById('sidebar-plano-badge');
-  const nomeEl = document.getElementById('sidebar-plano-nome');
-  const counterEl = document.getElementById('sidebar-rel-counter');
-  if (!badge) return;
-  badge.style.display = 'block';
-  nomeEl.textContent = planoAtual.nome || '—';
-  const usados = usuarioDB.relatorios_gerados_mes || 0;
-  const limite = planoAtual.limite_relatorios >= 999999 ? '∞' : planoAtual.limite_relatorios;
-  counterEl.textContent = `${usados} / ${limite}`;
-  // Cor de alerta quando perto do limite
-  if (typeof limite === 'number' && usados >= limite * 0.8) {
-    counterEl.style.color = 'var(--warn)';
-  } else {
-    counterEl.style.color = 'var(--accent)';
-  }
-}
+function atualizarBadgePlano() { /* badge de plano removido */ }
 
 // ── BANNER PERFIL INCOMPLETO ──────────────────────────────────────────────────
 function verificarPerfilCompleto() {
@@ -2243,42 +2224,13 @@ async function criarRegistroUsuarioSeNecessario() {
   } catch(e) { console.warn('criarRegistroUsuarioSeNecessario:', e); }
 }
 
-// Verifica se o usuário pode gerar mais relatórios neste mês
+// Geração de relatórios sem limite de plano
 function podeGerarRelatorio() {
-  // Se plano não carregou (ex: RLS, permissão), libera sem bloquear
-  if (!planoAtual || !usuarioDB) {
-    console.warn('podeGerarRelatorio: planoAtual null — liberando sem verificação');
-    return { pode: true };
-  }
-  const usados = usuarioDB.relatorios_gerados_mes || 0;
-  const limite = planoAtual.limite_relatorios;
-  // limite null ou >= 999999 = ilimitado
-  if (limite === null || limite === undefined || limite >= 999999) return { pode: true };
-  if (usados >= limite) {
-    const nomePlano = planoAtual.nome || 'atual';
-    return {
-      pode: false,
-      motivo: `Você atingiu o limite de ${limite} relatório(s)/mês do plano ${nomePlano}. Entre em contato para upgrade.`
-    };
-  }
   return { pode: true };
 }
 
 async function incrementarContadorRelatorio() {
-  if (!usuarioDB) return;
-  try {
-    const novoValor = (usuarioDB.relatorios_gerados_mes || 0) + 1;
-    await fetch(`${SB}/rest/v1/t2_usuarios?id=eq.${user.id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SK, 'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ relatorios_gerados_mes: novoValor })
-    });
-    usuarioDB.relatorios_gerados_mes = novoValor;
-    atualizarBadgePlano();
-  } catch(e) { console.warn('incrementarContadorRelatorio:', e); }
+  // Contador desativado — sem limite de plano
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -2640,7 +2592,7 @@ function renderPacientes(){
         <td>${p.data_nascimento?fmtDate(p.data_nascimento):'—'}</td>
         <td><span class="badge badge-purple">${total}</span></td>
         <td style="display:flex;gap:6px" onclick="event.stopPropagation()">
-          <button class="btn-sm" onclick="avisarSessaoViaAgenda()" title="Sessão gerada pela Agenda">📅 Agendar</button>
+          <button class="btn-sm" onclick="abrirModalAgendaParaPaciente(${p.id})">📅 Agendar</button>
           <button class="btn-danger" onclick="excluirPaciente(${p.id},'${p.nome.replace(/'/g,"\\'")}')">Excluir</button>
         </td>
       </tr>`;
@@ -2727,6 +2679,7 @@ function renderSessoes(){
         <td style="padding:10px 14px"><strong style="color:${(parseFloat(s.valor)||0)>0?'var(--accent)':'var(--text3)'}">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</strong></td>
         <td style="padding:10px 14px"><span class="badge badge-${s.status_pagamento==='pago'?'green':'orange'}">${s.status_pagamento==='pago'?'✓ Pago':'Pendente'}</span></td>
         <td style="padding:10px 14px" onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
+          <button class="btn-sm" onclick="imprimirSessaoIndividual(${s.id})" title="Imprimir sessão">🖨️</button>
           <button class="btn-sm" onclick="abrirEditarSessao(${s.id})" title="Editar">✏️</button>
           <button class="btn-danger" onclick="excluirSessaoDireto(${s.id})" title="Excluir">🗑️</button>
         </div></td>
@@ -3163,14 +3116,14 @@ function renderListaRelatorios(data){
       const dataInicio = r.data_inicio ? fmtDate(r.data_inicio) : '—';
       const dataFim = r.data_fim ? fmtDate(r.data_fim) : '—';
       const periodo = (dataInicio!=='—'&&dataFim!=='—') ? `${dataInicio} → ${dataFim}` : (r.periodo||'—');
-      return`<tr class="row-clickable" onclick="verRelatorioInline(${r.id})">
+      return`<tr class="row-clickable" onclick="verRelatorio(${r.id})">
         <td><strong>${nomePac}</strong></td>
         <td style="font-size:12px">${fmtDate(r.created_at?.split('T')[0])}</td>
         <td><span style="font-size:11px;color:var(--text3)">${periodo}</span></td>
         <td><span class="badge badge-purple">${r.total_sessoes_incluidas||r.total_sessoes||'—'}</span></td>
         <td style="font-size:11px;color:var(--text3)">${r.profissional_nome||'—'}</td>
         <td style="display:flex;gap:6px" onclick="event.stopPropagation()">
-          <button class="btn-sm" onclick="verRelatorioInline(${r.id})">👁️ Ver</button>
+          <button class="btn-sm" onclick="verRelatorio(${r.id})">👁️ Ver</button>
           <button class="btn-sm" onclick="imprimirRelatorioPorId(${r.id})" title="Imprimir">🖨️</button>
           <button class="btn-danger" onclick="excluirRelatorio(${r.id})">Excluir</button>
         </td>
@@ -3182,18 +3135,21 @@ function renderListaRelatorios(data){
 function verRelatorioInline(id){
   const rel = window._relatoriosSalvos?.find(r=>r.id===id);
   if(!rel){toast('Relatório não encontrado','orange');return;}
-  const s = {
-    s1_visao_geral: rel.s1_visao_geral,
-    s2_melhorou: rel.s2_melhorou,
-    s3_persiste: rel.s3_persiste,
-    s4_solucionado: rel.s4_solucionado,
-    s5_intervencoes: typeof rel.s5_intervencoes==='string'?JSON.parse(rel.s5_intervencoes||'[]'):rel.s5_intervencoes||[],
-    s6_recomendacoes: typeof rel.s6_recomendacoes==='string'?JSON.parse(rel.s6_recomendacoes||'[]'):rel.s6_recomendacoes||[]
-  };
-  const hist = typeof rel.historico_sessoes==='string'?JSON.parse(rel.historico_sessoes||'[]'):rel.historico_sessoes||[];
+  window._relAtual = _montarRelAtual(rel);
+  const s    = window._relAtual.secoes;
+  const hist = window._relAtual.historico_sessoes;
   const nomePac = rel.paciente_nome || pacientes.find(x=>x.id==rel.paciente_id)?.nome || '—';
+  const pacObj = pacientes.find(x=>x.id==rel.paciente_id);
   const dataInicio = rel.data_inicio ? fmtDate(rel.data_inicio) : '—';
   const dataFim = rel.data_fim ? fmtDate(rel.data_fim) : '—';
+  // Calcula idade do paciente
+  let idadeStr = '';
+  if(pacObj?.data_nascimento){
+    const nasc=new Date(pacObj.data_nascimento+'T12:00:00');
+    const hoje=new Date();
+    const anos=hoje.getFullYear()-nasc.getFullYear()-((hoje.getMonth()<nasc.getMonth()||(hoje.getMonth()===nasc.getMonth()&&hoje.getDate()<nasc.getDate()))?1:0);
+    idadeStr = ` · ${anos} anos`;
+  }
 
   const secaoCard=(titulo,conteudo,cor='124,58,237')=>conteudo?`
     <div style="background:rgba(${cor},.06);border:1px solid rgba(${cor},.18);border-radius:12px;padding:16px;margin-bottom:12px">
@@ -3206,15 +3162,13 @@ function verRelatorioInline(id){
       <ul style="padding-left:16px;margin:0">${itens.map(i=>`<li style="font-size:13px;line-height:1.9;color:var(--text2)">${i}</li>`).join('')}</ul>
     </div>`:'';
 
-  window._relAtual = {...rel, secoes:s, historico_sessoes:hist, periodoLabel:`${dataInicio} a ${dataFim}`, pac:{nome:nomePac}, cfgProf:{
-    nome_profissional:rel.profissional_nome,registro:rel.profissional_crp,nome_clinica:rel.clinica_nome
-  }};
+  // _relAtual já montado acima via _montarRelAtual
 
   document.getElementById('area-relatorio').innerHTML=`
     <div style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(109,40,217,.08));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:20px;margin-bottom:20px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
         <div>
-          <div style="font-size:20px;font-weight:800;margin-bottom:4px">${nomePac}</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:4px">${nomePac}<span style="font-size:13px;font-weight:500;color:var(--text3)">${idadeStr}</span></div>
           <div style="font-size:12px;color:var(--text3)">${dataInicio} a ${dataFim} · ${rel.total_sessoes_incluidas||'?'} sessões · Gerado em ${fmtDate(rel.created_at?.split('T')[0])}</div>
           <div style="font-size:12px;color:var(--text3);margin-top:2px">${rel.profissional_nome||''} ${rel.profissional_crp?'· '+rel.profissional_crp:''}</div>
         </div>
@@ -3295,9 +3249,10 @@ function imprimirSessoesFiltradas() {
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Sessões Clínicas — ${nomeClinica}</title>
+  <title>Sessões — ${nomeClinica}</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    @page{margin:14mm 16mm}
     body { 
       font-family:'Segoe UI',Arial,sans-serif; 
       color:#1e293b; 
@@ -3307,15 +3262,8 @@ function imprimirSessoesFiltradas() {
     }
     
     /* CABEÇALHO */
-    .hdr {
-      background:linear-gradient(135deg,#1d4ed8,#2563EB);
-      color:#fff;
-      padding:22px 36px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    .hdr-logo { font-size:22px; font-weight:900; letter-spacing:-0.5px; }
+    .hdr{background:linear-gradient(135deg,#1d4ed8,#1e40af);color:#fff;padding:16px 28px;display:flex;justify-content:space-between;align-items:center}
+    .hdr-logo{font-size:18px;font-weight:900;letter-spacing:-0.5px}
     .hdr-sub { 
       font-size:10px; 
       opacity:.75; 
@@ -3510,15 +3458,16 @@ function imprimirSessoesFiltradas() {
   </div>
 
   <div class="sec-titulo">
-    📚 Sessões Registradas
-    <span class="sec-badge">${sessoesFiltradas.length} ${sessoesFiltradas.length === 1 ? 'sessão' : 'sessões'}</span>
+    Sessões Registradas
+    <span class="sec-badge">${Math.min(sessoesFiltradas.length,5)} de ${sessoesFiltradas.length} ${sessoesFiltradas.length === 1 ? 'sessão' : 'sessões'}</span>
   </div>
 
-  ${sessoesFiltradas.map((s, i) => {
+  ${sessoesFiltradas.slice(0,5).map((s, i) => {
     const pac = pacientes.find(p => p.id == s.paciente_id);
-    const dataH = s.data_sessao ? new Date(s.data_sessao + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'}) : '—';
+    const dataH = s.data_sessao ? new Date(s.data_sessao + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'short', year:'numeric'}) : '—';
     const hrH = s.horario && s.horario !== '00:00:00' ? s.horario.substring(0,5) : '';
-    
+    const resumoPrincipal = s.resumo_ia || s.evolucao || '';
+    if(!resumoPrincipal && !s.queixas_principais) return '';
     return `<div class="sess-card">
       <div class="sess-hdr">
         <div class="sess-num">
@@ -3526,39 +3475,16 @@ function imprimirSessoesFiltradas() {
           &nbsp;·&nbsp; 
           ${pac?.nome || 'Paciente #' + s.paciente_id}
           &nbsp;·&nbsp; 
-          ${dataH}
-          ${hrH ? ' &nbsp;·&nbsp; ' + hrH : ''}
+          ${dataH}${hrH ? ' &nbsp;·&nbsp; ' + hrH : ''}
         </div>
-        ${s.status_pagamento ? `<span class="${s.status_pagamento === 'pago' ? 'sess-pgto-pago' : 'sess-pgto-pend'}">
-          ${s.status_pagamento === 'pago' ? '✓ Pago' : '⏳ Pendente'}
-        </span>` : ''}
+        ${s.status_pagamento ? `<span class="${s.status_pagamento === 'pago' ? 'sess-pgto-pago' : 'sess-pgto-pend'}">${s.status_pagamento === 'pago' ? '✓ Pago' : '⏳ Pendente'}</span>` : ''}
       </div>
-      ${s.queixas_principais ? `<div class="sess-campo">
-        <label>Queixas Apresentadas</label>
-        <p>${s.queixas_principais.replace(/\n/g, '<br>')}</p>
-      </div>` : ''}
-      ${s.intervencoes ? `<div class="sess-campo">
-        <label>Intervenções Realizadas</label>
-        <p>${s.intervencoes.replace(/\n/g, '<br>')}</p>
-      </div>` : ''}
-      ${s.evolucao ? `<div class="sess-campo">
-        <label>Evolução Observada</label>
-        <p>${s.evolucao.replace(/\n/g, '<br>')}</p>
-      </div>` : ''}
-      ${s.pontos_atencao ? `<div class="sess-campo">
-        <label>Pontos de Atenção</label>
-        <p>${s.pontos_atencao.replace(/\n/g, '<br>')}</p>
-      </div>` : ''}
-      ${s.proximos_passos ? `<div class="sess-campo">
-        <label>Próximos Passos</label>
-        <p>${s.proximos_passos.replace(/\n/g, '<br>')}</p>
-      </div>` : ''}
-      ${s.resumo_ia ? `<div class="resumo-ia">
-        <strong>🤖 Análise IA</strong>
-        <p>${s.resumo_ia.replace(/\n/g, '<br>')}</p>
-      </div>` : ''}
+      ${resumoPrincipal ? `<div class="resumo-ia">
+        <strong>${s.resumo_ia ? '✦ Análise IA' : 'Evolução'}</strong>
+        <p>${resumoPrincipal.replace(/\n/g,' ').substring(0,350)}${resumoPrincipal.length>350?'…':''}</p>
+      </div>` : `<div class="sess-campo"><label>Queixas</label><p>${s.queixas_principais.replace(/\n/g,' ')}</p></div>`}
     </div>`;
-  }).join('')}
+  }).filter(Boolean).join('')}
 
   <div class="ftr">
     <div class="ass">
@@ -3592,17 +3518,45 @@ function imprimirSessoesFiltradas() {
   w.document.close();
 }
 
+// ── Helper: converte valor que pode ser string-JSON, objeto ou array → array ──
+function _parseJsonArr(val){
+  if(Array.isArray(val)) return val;
+  if(typeof val==='string'){
+    try{
+      let p=JSON.parse(val||'[]');
+      // Supabase às vezes retorna JSON duplamente serializado ("[\"item\"]")
+      if(typeof p==='string') p=JSON.parse(p);
+      return Array.isArray(p)?p:[];
+    } catch(e){return [];}
+  }
+  return [];
+}
+
+// ── Helper: monta _relAtual padronizado a partir de um registro do banco ──
+function _montarRelAtual(rel){
+  // Supabase devolve campos na raiz. N8N pode devolver dentro de "secoes".
+  const sec = rel.secoes || {};
+  return {
+    ...rel,
+    secoes:{
+      s1_visao_geral:   sec.s1_visao_geral   || rel.s1_visao_geral   || '',
+      s2_melhorou:      sec.s2_melhorou      || rel.s2_melhorou      || '',
+      s3_persiste:      sec.s3_persiste      || rel.s3_persiste      || '',
+      s4_solucionado:   sec.s4_solucionado   || rel.s4_solucionado   || '',
+      s5_intervencoes:  _parseJsonArr(sec.s5_intervencoes  ?? rel.s5_intervencoes),
+      s6_recomendacoes: _parseJsonArr(sec.s6_recomendacoes ?? rel.s6_recomendacoes)
+    },
+    historico_sessoes: _parseJsonArr(rel.historico_sessoes),
+    periodoLabel: `${fmtDate(rel.data_inicio)} a ${fmtDate(rel.data_fim)}`,
+    pac:    { nome: rel.paciente_nome || '—' },
+    cfgProf:{ nome_profissional: rel.profissional_nome, registro: rel.profissional_crp, nome_clinica: rel.clinica_nome }
+  };
+}
+
 function imprimirRelatorioPorId(id){
   const rel = window._relatoriosSalvos?.find(r=>r.id===id);
-  if(rel){ window._relAtual = {...rel, secoes:{
-    s1_visao_geral:rel.s1_visao_geral,s2_melhorou:rel.s2_melhorou,
-    s3_persiste:rel.s3_persiste,s4_solucionado:rel.s4_solucionado,
-    s5_intervencoes:typeof rel.s5_intervencoes==='string'?JSON.parse(rel.s5_intervencoes||'[]'):rel.s5_intervencoes||[],
-    s6_recomendacoes:typeof rel.s6_recomendacoes==='string'?JSON.parse(rel.s6_recomendacoes||'[]'):rel.s6_recomendacoes||[]
-  }, historico_sessoes:typeof rel.historico_sessoes==='string'?JSON.parse(rel.historico_sessoes||'[]'):rel.historico_sessoes||[],
-  periodoLabel:`${fmtDate(rel.data_inicio)} a ${fmtDate(rel.data_fim)}`,
-  pac:{nome:rel.paciente_nome}, cfgProf:{nome_profissional:rel.profissional_nome,registro:rel.profissional_crp,nome_clinica:rel.clinica_nome}
-  }; }
+  if(!rel){ toast('Relatório não encontrado','orange'); return; }
+  window._relAtual = _montarRelAtual(rel);
   imprimirRelatorio();
 }
 
@@ -3653,6 +3607,13 @@ function avisarSessaoViaAgenda(){
 function abrirModalSessaoParaPaciente(pacId){
   // Bloqueado: sessão só pode vir de agendamento confirmado
   toast('Para registrar uma sessão, primeiro é necessário ter um agendamento confirmado.','orange');
+}
+
+function abrirModalAgendaParaPaciente(pacId){
+  abrirModalAgenda();
+  // Pré-seleciona o paciente no select
+  const sel = document.getElementById('ag-pac');
+  if(sel && pacId) sel.value = pacId;
 }
 
 function abrirModalAgenda(){
@@ -4237,13 +4198,6 @@ async function confirmarGerarRelatorio(){
   const pac=pacientes.find(p=>String(p.id)===String(pacId));
   if(!pac){toast('Selecione um paciente','red');return}
 
-  // Verifica limite de relatórios do plano
-  const permissao = podeGerarRelatorio();
-  if (!permissao.pode) {
-    toast(permissao.motivo, 'red');
-    fecharModal('modal-relatorio');
-    return;
-  }
   const periodo=document.getElementById('rel-periodo').value;
   const hoje=new Date();
   let dataInicio, dataFim=localDateStr(hoje);
@@ -4303,10 +4257,24 @@ async function confirmarGerarRelatorio(){
     if(!d.success) throw new Error(d.mensagem||'Erro ao gerar relatório');
     // Incrementa contador de relatórios do mês
     await incrementarContadorRelatorio();
-    const s=d.secoes||{};
-    const hist=d.historico_sessoes||[];
-    const periodoLabel={mes:'Último mês',trimestre:'Últimos 3 meses',semestre:'Últimos 6 meses',ano:'Último ano',tudo:'Todo o histórico',custom:'Período personalizado'}[periodo];
-    window._relAtual={...d, periodoLabel, pac, cfgProf};
+
+    // Monta _relAtual usando o mesmo helper — à prova de bala
+    const periodoLabel={mes:'Último mês',trimestre:'Últimos 3 meses',semestre:'Últimos 6 meses',ano:'Último ano',tudo:'Todo o histórico',custom:'Período personalizado'}[periodo]||'Período';
+    window._relAtual = _montarRelAtual({
+      ...d,
+      paciente_nome:     d.paciente || pac.nome,
+      profissional_nome: nomeProfissional,
+      profissional_crp:  registroProfissional,
+      clinica_nome:      nomeClinica,
+      data_inicio:       dataInicio,
+      data_fim:          dataFim,
+    });
+    window._relAtual.periodoLabel = periodoLabel;
+    window._relAtual.pac          = pac;
+    window._relAtual.cfgProf      = { nome_profissional: nomeProfissional, registro: registroProfissional, nome_clinica: nomeClinica };
+
+    const s    = window._relAtual.secoes;
+    const hist = window._relAtual.historico_sessoes;
 
     const secaoCard = (titulo, conteudo, cor='124,58,237') => conteudo ? `
       <div style="background:rgba(${cor},.06);border:1px solid rgba(${cor},.18);border-radius:12px;padding:16px;margin-bottom:12px">
@@ -4406,172 +4374,297 @@ function verRelatorio(id){
   document.getElementById('rel-view-relatorio').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function imprimirRelatorio(){
-  if(!window._relAtual){toast('Nenhum relatório gerado','orange');return}
-  const d = window._relAtual;
-  const s = d.secoes || {};
-  const hist = Array.isArray(d.historico_sessoes) ? d.historico_sessoes :
-    (typeof d.historico_sessoes==='string' ? JSON.parse(d.historico_sessoes||'[]') : []);
+function imprimirSessaoIndividual(id){
+  const s = sessoes.find(x=>x.id==id);
+  if(!s){ toast('Sessão não encontrada','orange'); return; }
+  const pac = pacientes.find(p=>p.id==s.paciente_id);
 
   let cfgProf={}; try{cfgProf=JSON.parse(localStorage.getItem('cf_config')||'{}');}catch(e){}
-  let cfgSis={}; try{cfgSis=JSON.parse(localStorage.getItem('cf_sistema')||'{}');}catch(e){}
-
-  const profNome    = d.cfgProf?.nome_profissional || d.profissional_nome || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
-  const crp         = d.cfgProf?.registro || d.profissional_crp || cfgProf.registro || user.user_metadata?.crp || '';
-  const nomeClinica = d.cfgProf?.nome_clinica || d.clinica_nome || cfgProf.nome_clinica || 'CatherFlow';
-  const pacNome     = d.pac?.nome || d.paciente_nome || d.paciente || '—';
-  const periodoLabel= d.periodoLabel || '—';
-  const totalSess   = d.total_sessoes || hist.length || '—';
+  const profDB = usuarioDB||{};
+  const profNome    = profDB.nome_completo || cfgProf.nome_profissional || user?.user_metadata?.nome || user?.email || '';
+  const crp         = profDB.registro || cfgProf.registro || user?.user_metadata?.crp || '';
+  const nomeClinica = profDB.nome_clinica || cfgProf.nome_clinica || 'CatherFlow';
   const dataGeracao = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const dataSessao  = s.data_sessao ? new Date(s.data_sessao+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+  const numSess     = s.numero_sessao || s._seq || '—';
 
-  const secao = (num, titulo, conteudo) => conteudo ? `
-    <div class="sec">
-      <div class="sec-num">${num}.</div>
-      <div class="sec-body">
-        <div class="sec-titulo">${titulo}</div>
-        <div class="sec-texto">${conteudo.replace(/\n/g,'<br>')}</div>
-      </div>
+  const campo = (label, valor) => valor ? `
+    <div class="campo">
+      <div class="campo-label">${label}</div>
+      <div class="campo-valor">${valor.replace(/\n/g,'<br>')}</div>
     </div>` : '';
-
-  const lista = (num, titulo, itens) => itens?.length ? `
-    <div class="sec">
-      <div class="sec-num">${num}.</div>
-      <div class="sec-body">
-        <div class="sec-titulo">${titulo}</div>
-        <ul class="sec-lista">${itens.map(i=>`<li>${i}</li>`).join('')}</ul>
-      </div>
-    </div>` : '';
-
-  const s5 = Array.isArray(s.s5_intervencoes) ? s.s5_intervencoes :
-    (typeof s.s5_intervencoes==='string' ? JSON.parse(s.s5_intervencoes||'[]') : []);
-  const s6 = Array.isArray(s.s6_recomendacoes) ? s.s6_recomendacoes :
-    (typeof s.s6_recomendacoes==='string' ? JSON.parse(s.s6_recomendacoes||'[]') : []);
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-  <title>Relatório Clínico — ${pacNome}</title>
+  <title>Sessão ${numSess} — ${pac?.nome||'Paciente'}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:10.5px;line-height:1.7}
+    @page{margin:14mm 16mm}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:10px;line-height:1.65}
 
-    /* CABEÇALHO */
-    .hdr{background:linear-gradient(135deg,#1d4ed8,#2563EB);color:#fff;padding:22px 36px;display:flex;justify-content:space-between;align-items:center}
-    .hdr-logo{font-size:22px;font-weight:900;letter-spacing:-0.5px}
-    .hdr-sub{font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
-    .hdr-right{text-align:right;font-size:10px;opacity:.8;line-height:1.6}
+    .hdr{background:linear-gradient(135deg,#1d4ed8 0%,#1e40af 100%);color:#fff;padding:16px 28px;display:flex;justify-content:space-between;align-items:center}
+    .hdr-logo{font-size:17px;font-weight:900;letter-spacing:-0.5px}
+    .hdr-sub{font-size:9px;opacity:.7;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}
+    .hdr-right{text-align:right;font-size:9px;opacity:.85;line-height:1.7}
 
-    /* FAIXA PACIENTE */
-    .faixa{background:#f5f3ff;border-bottom:2px solid #dbeafe;padding:14px 36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px}
-    .faixa-item label{font-size:8px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px}
-    .faixa-item span{font-size:12px;font-weight:700;color:#1e293b}
+    .faixa{background:#f8faff;border-bottom:1.5px solid #e0e9ff;padding:10px 28px;display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+    .faixa-pac{font-size:15px;font-weight:800;color:#1e293b;flex:1}
+    .faixa-meta{display:flex;gap:20px;flex-wrap:wrap}
+    .faixa-item{display:flex;flex-direction:column}
+    .faixa-item label{font-size:7.5px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:1px}
+    .faixa-item span{font-size:10px;font-weight:700;color:#334155}
 
-    /* CORPO */
-    .corpo{padding:22px 36px}
+    .corpo{padding:14px 28px}
+    .campo{margin-bottom:14px;page-break-inside:avoid}
+    .campo-label{font-size:8px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+    .campo-valor{font-size:10px;color:#334155;line-height:1.75;background:#f8faff;border-left:3px solid #c7d9ff;border-radius:0 6px 6px 0;padding:8px 12px}
 
-    /* SEÇÕES */
-    .sec{display:flex;gap:14px;margin-bottom:16px;page-break-inside:avoid}
-    .sec-num{font-size:22px;font-weight:900;color:#dbeafe;line-height:1;flex-shrink:0;width:24px;text-align:right}
-    .sec-body{flex:1;border-left:3px solid #dbeafe;padding-left:14px}
-    .sec-titulo{font-size:10px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
-    .sec-texto{font-size:10.5px;line-height:1.8;color:#334155;text-align:justify}
-    .sec-lista{padding-left:16px;margin:0}
-    .sec-lista li{font-size:10.5px;line-height:1.9;color:#334155}
+    .resumo-ia{background:linear-gradient(135deg,#f0f4ff,#f5fff9);border:1.5px solid #c7d9ff;border-radius:8px;padding:12px 14px;margin-bottom:14px}
+    .resumo-ia-label{font-size:8px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+    .resumo-ia-texto{font-size:10px;color:#1e293b;line-height:1.75}
 
-    /* HISTÓRICO */
-    .hist-titulo{font-size:13px;font-weight:800;color:#1e293b;padding:16px 36px 12px;border-top:2px solid #dbeafe;background:#fafafa;display:flex;align-items:center;gap:10px}
-    .hist-badge{background:#dbeafe;color:#2563EB;font-size:9px;font-weight:800;padding:3px 10px;border-radius:20px}
-    .hist-card{margin:0 36px 12px;border:1px solid #e2e8f0;border-left:4px solid #2563EB;border-radius:0 8px 8px 0;padding:14px 16px;background:#fff;page-break-inside:avoid}
-    .hist-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .hist-num{font-size:11px;font-weight:800;color:#1d4ed8}
-    .hist-pgto-pago{background:#dcfce7;color:#166534;font-size:8px;font-weight:800;padding:2px 8px;border-radius:10px}
-    .hist-pgto-pend{background:#fef9c3;color:#854d0e;font-size:8px;font-weight:800;padding:2px 8px;border-radius:10px}
-    .hist-campo{margin-bottom:6px}
-    .hist-campo label{font-size:8px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:1px}
-    .hist-campo p{font-size:10px;color:#334155;line-height:1.7}
-    .resumo-ia{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:9px 12px;margin-top:8px}
-    .resumo-ia strong{color:#166534;font-size:9px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
-    .resumo-ia p{font-size:10px;color:#1a2e1a;line-height:1.7}
+    .privado{background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:14px}
+    .privado-label{font-size:8px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
 
-    /* RODAPÉ */
-    .ftr{border-top:3px solid #2563EB;padding:18px 36px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafafa;margin-top:8px}
-    .ass{min-width:220px}
-    .ass-linha{border-top:1px solid #94a3b8;padding-top:6px;margin-top:36px}
-    .ass-nome{font-size:11px;font-weight:700;color:#1e293b}
-    .ass-reg{font-size:10px;color:#64748b;margin-top:2px}
-    .ftr-info{text-align:right;font-size:9px;color:#94a3b8;line-height:1.8}
+    .ftr{border-top:2px solid #2563EB;padding:10px 28px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafbff;margin-top:8px}
+    .ass-linha{border-top:1px solid #cbd5e1;padding-top:5px;margin-top:24px;min-width:160px}
+    .ass-nome{font-size:10px;font-weight:700;color:#1e293b}
+    .ass-reg{font-size:9px;color:#64748b;margin-top:1px}
+    .ftr-info{text-align:right;font-size:8px;color:#94a3b8;line-height:1.9}
 
-    @media print{
-      body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      .hist-card,.sec{page-break-inside:avoid}
-    }
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
   </style></head><body>
 
   <div class="hdr">
     <div>
       <div class="hdr-logo">${nomeClinica}</div>
-      <div class="hdr-sub">Relatório Clínico de Acompanhamento Terapêutico</div>
+      <div class="hdr-sub">Registro de Sessão Clínica</div>
     </div>
     <div class="hdr-right">
-      <div>Gerado em ${dataGeracao}</div>
-      ${profNome?`<div>${profNome}</div>`:''}
+      ${profNome?`<div><strong>${profNome}</strong></div>`:''}
       ${crp?`<div>${crp}</div>`:''}
+      <div style="opacity:.6">${dataGeracao}</div>
     </div>
   </div>
 
   <div class="faixa">
-    <div class="faixa-item"><label>Paciente</label><span>${pacNome}</span></div>
-    <div class="faixa-item"><label>Período Analisado</label><span>${periodoLabel}</span></div>
-    <div class="faixa-item"><label>Total de Sessões</label><span>${totalSess}</span></div>
-    <div class="faixa-item"><label>Profissional</label><span>${profNome||'—'}</span></div>
-    ${crp?`<div class="faixa-item"><label>Registro</label><span>${crp}</span></div>`:''}
+    <div class="faixa-pac">${pac?.nome||'—'}</div>
+    <div class="faixa-meta">
+      <div class="faixa-item"><label>Data</label><span>${dataSessao}</span></div>
+      <div class="faixa-item"><label>Sessão Nº</label><span>${numSess}</span></div>
+      <div class="faixa-item"><label>Tipo</label><span>${s.tipo_sessao||'Presencial'}</span></div>
+      ${s.horario?`<div class="faixa-item"><label>Horário</label><span>${s.horario.substring(0,5)}</span></div>`:''}
+      ${s.valor?`<div class="faixa-item"><label>Valor</label><span>R$ ${parseFloat(s.valor).toFixed(2)}</span></div>`:''}
+      ${crp?`<div class="faixa-item"><label>Registro</label><span>${crp}</span></div>`:''}
+    </div>
   </div>
 
   <div class="corpo">
-    ${secao(1,'Visão Geral do Percurso Terapêutico', s.s1_visao_geral)}
-    ${secao(2,'Aspectos que Evoluíram Positivamente', s.s2_melhorou)}
-    ${secao(3,'Aspectos que Ainda Demandam Atenção', s.s3_persiste)}
-    ${secao(4,'Questões Trabalhadas e Superadas', s.s4_solucionado)}
-    ${lista(5,'Intervenções e Técnicas Utilizadas', s5)}
-    ${lista(6,'Recomendações e Encaminhamentos', s6)}
-  </div>
+    ${s.resumo_ia?`<div class="resumo-ia">
+      <div class="resumo-ia-label">✦ Resumo IA</div>
+      <div class="resumo-ia-texto">${s.resumo_ia}</div>
+    </div>`:''}
 
-  ${hist.length ? `
-  <div class="hist-titulo">
-    Histórico Detalhado de Sessões
-    <span class="hist-badge">${hist.length} ${hist.length===1?'sessão':'sessões'}</span>
+    ${campo('Queixas Principais', s.queixas_principais)}
+    ${campo('Intervenções Realizadas', s.intervencoes)}
+    ${campo('Evolução Observada', s.evolucao)}
+    ${campo('Pontos de Atenção', s.pontos_atencao)}
+    ${campo('Próximos Passos', s.proximos_passos)}
+
+    ${s.anotacao_clinica?`<div class="privado">
+      <div class="privado-label">🔒 Anotação Clínica Privada</div>
+      <div style="font-size:10px;color:#92400e;line-height:1.75">${s.anotacao_clinica.replace(/\n/g,'<br>')}</div>
+    </div>`:''}
   </div>
-  ${hist.map((h,i)=>{
-    const dataH = h.data ? new Date(h.data.includes('T')?h.data:h.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) : '—';
-    const hrH = h.horario && h.horario!=='00:00:00' ? h.horario.substring(0,5) : '';
-    return `<div class="hist-card">
-      <div class="hist-hdr">
-        <div class="hist-num">Sessão ${h.numero_sessao||h.sessao||i+1} &nbsp;·&nbsp; ${dataH}${hrH?' &nbsp;·&nbsp; '+hrH:''}</div>
-        ${h.status_pagamento?`<span class="${h.status_pagamento==='pago'?'hist-pgto-pago':'hist-pgto-pend'}">${h.status_pagamento==='pago'?'✓ Pago':'⏳ Pendente'}</span>`:''}
-      </div>
-      ${h.queixas_principais?`<div class="hist-campo"><label>Queixas Apresentadas</label><p>${h.queixas_principais.replace(/\n/g,'<br>')}</p></div>`:''}
-      ${h.intervencoes?`<div class="hist-campo"><label>Intervenções Realizadas</label><p>${h.intervencoes.replace(/\n/g,'<br>')}</p></div>`:''}
-      ${h.evolucao?`<div class="hist-campo"><label>Evolução Observada</label><p>${h.evolucao.replace(/\n/g,'<br>')}</p></div>`:''}
-      ${h.pontos_atencao?`<div class="hist-campo"><label>Pontos de Atenção</label><p>${h.pontos_atencao.replace(/\n/g,'<br>')}</p></div>`:''}
-      ${h.proximos_passos?`<div class="hist-campo"><label>Próximos Passos</label><p>${h.proximos_passos.replace(/\n/g,'<br>')}</p></div>`:''}
-      ${h.resumo_ia?`<div class="resumo-ia"><strong>🤖 Análise IA</strong><p>${h.resumo_ia.replace(/\n/g,'<br>')}</p></div>`:''}
-    </div>`;
-  }).join('')}` : ''}
 
   <div class="ftr">
-    <div class="ass">
+    <div>
       <div class="ass-linha">
         <div class="ass-nome">${profNome}</div>
         ${crp?`<div class="ass-reg">${crp}</div>`:''}
       </div>
     </div>
     <div style="text-align:center">
-      <div class="ass-linha" style="min-width:200px">
-        <div class="ass-reg">Assinatura</div>
+      <div class="ass-linha" style="min-width:160px">
+        <div class="ass-reg" style="text-align:center">Assinatura</div>
       </div>
     </div>
     <div class="ftr-info">
-      <div>Documento gerado pelo ${nomeClinica}</div>
+      <div>${nomeClinica}</div>
       <div>${dataGeracao}</div>
-      <div style="font-size:8px;color:#cbd5e1;margin-top:2px">Relatório confidencial — uso clínico exclusivo</div>
+      <div style="font-size:7.5px;color:#cbd5e1">Documento confidencial — uso clínico exclusivo</div>
+    </div>
+  </div>
+
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  if(!w){ toast('Permita popups para imprimir','orange'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+function imprimirRelatorio(){
+  if(!window._relAtual){toast('Nenhum relatório gerado','orange');return}
+  const d = window._relAtual;
+
+  // ── Resolve secoes de QUALQUER origem possível ──
+  // Origem A: banco via _montarRelAtual → d.secoes populado
+  // Origem B: N8N via confirmarGerarRelatorio → d.secoes populado
+  // Fallback: campos diretos na raiz (compatibilidade total)
+  const sec = d.secoes || {};
+  const s = {
+    s1_visao_geral:   sec.s1_visao_geral   || d.s1_visao_geral   || '',
+    s2_melhorou:      sec.s2_melhorou      || d.s2_melhorou      || '',
+    s3_persiste:      sec.s3_persiste      || d.s3_persiste      || '',
+    s4_solucionado:   sec.s4_solucionado   || d.s4_solucionado   || '',
+    s5_intervencoes:  _parseJsonArr(sec.s5_intervencoes  ?? d.s5_intervencoes),
+    s6_recomendacoes: _parseJsonArr(sec.s6_recomendacoes ?? d.s6_recomendacoes)
+  };
+
+  const histAll = _parseJsonArr(d.historico_sessoes);
+
+  // Limita a exibição a no máximo 5 sessões mais recentes
+  const hist = histAll.slice(-5).reverse();
+
+  let cfgProf={}; try{cfgProf=JSON.parse(localStorage.getItem('cf_config')||'{}');}catch(e){}
+
+  const profNome    = d.cfgProf?.nome_profissional || d.profissional_nome || cfgProf.nome_profissional || user.user_metadata?.nome || user.email;
+  const crp         = d.cfgProf?.registro || d.profissional_crp || cfgProf.registro || user.user_metadata?.crp || '';
+  const nomeClinica = d.cfgProf?.nome_clinica || d.clinica_nome || cfgProf.nome_clinica || 'CatherFlow';
+  const pacNome     = d.pac?.nome || d.paciente_nome || d.paciente || '—';
+  const periodoLabel= d.periodoLabel || '—';
+  const totalSess   = d.total_sessoes || histAll.length || '—';
+  const dataGeracao = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  const s5 = _parseJsonArr(s.s5_intervencoes);
+  const s6 = _parseJsonArr(s.s6_recomendacoes);
+
+  // Bloco de análise IA consolidada — principal destaque do relatório
+  const blocoIA = (s.s1_visao_geral || s.s2_melhorou || s.s3_persiste) ? `
+    <div class="ia-bloco">
+      <div class="ia-label">✦ Análise Clínica — Inteligência Artificial</div>
+      ${s.s1_visao_geral?`<p class="ia-texto">${s.s1_visao_geral.replace(/\n/g,' ')}</p>`:''}
+      <div class="ia-grid">
+        ${s.s2_melhorou?`<div class="ia-col ia-col-green"><span class="ia-col-label">Evolução Positiva</span><p>${s.s2_melhorou.replace(/\n/g,' ')}</p></div>`:''}
+        ${s.s3_persiste?`<div class="ia-col ia-col-amber"><span class="ia-col-label">Em Acompanhamento</span><p>${s.s3_persiste.replace(/\n/g,' ')}</p></div>`:''}
+      </div>
+      ${s.s4_solucionado?`<div class="ia-col ia-col-blue" style="margin-top:8px"><span class="ia-col-label">Questões Superadas</span><p>${s.s4_solucionado.replace(/\n/g,' ')}</p></div>`:''}
+      ${(s5.length||s6.length)?`
+      <div class="ia-grid" style="margin-top:10px">
+        ${s5.length?`<div class="ia-col"><span class="ia-col-label">Intervenções</span><ul class="ia-lista">${s5.slice(0,4).map(i=>`<li>${i}</li>`).join('')}</ul></div>`:''}
+        ${s6.length?`<div class="ia-col"><span class="ia-col-label">Recomendações</span><ul class="ia-lista">${s6.slice(0,4).map(i=>`<li>${i}</li>`).join('')}</ul></div>`:''}
+      </div>`:''}
+    </div>` : '';
+
+  // Seção de sessões removida do PDF do relatório — conteúdo já está na análise IA
+  const sessoesHTML = '';
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Relatório — ${pacNome}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    @page{margin:14mm 16mm}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:10px;line-height:1.65}
+
+    /* CABEÇALHO */
+    .hdr{background:linear-gradient(135deg,#1d4ed8 0%,#1e40af 100%);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;border-radius:0}
+    .hdr-left{}
+    .hdr-logo{font-size:18px;font-weight:900;letter-spacing:-0.5px;line-height:1}
+    .hdr-sub{font-size:9px;opacity:.7;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}
+    .hdr-right{text-align:right;font-size:9px;opacity:.85;line-height:1.7}
+
+    /* FAIXA PACIENTE */
+    .faixa{background:#f8faff;border-bottom:1.5px solid #e0e9ff;padding:10px 28px;display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+    .faixa-pac{font-size:15px;font-weight:800;color:#1e293b;flex:1;min-width:160px}
+    .faixa-meta{display:flex;gap:20px;flex-wrap:wrap}
+    .faixa-item{display:flex;flex-direction:column}
+    .faixa-item label{font-size:7.5px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:1px}
+    .faixa-item span{font-size:10px;font-weight:700;color:#334155}
+
+    /* BLOCO IA */
+    .ia-bloco{margin:16px 28px;background:linear-gradient(135deg,#f0f4ff 0%,#f5fff9 100%);border:1.5px solid #c7d9ff;border-radius:10px;padding:16px 18px}
+    .ia-label{font-size:8.5px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .ia-texto{font-size:10px;color:#1e293b;line-height:1.75;margin-bottom:10px;text-align:justify}
+    .ia-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ia-col{background:#fff;border-radius:7px;padding:9px 11px;border:1px solid #e2e8f0}
+    .ia-col-green{border-left:3px solid #22c55e}
+    .ia-col-amber{border-left:3px solid #f59e0b}
+    .ia-col-blue{border-left:3px solid #3b82f6}
+    .ia-col-label{font-size:7.5px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:4px}
+    .ia-col p{font-size:9.5px;color:#334155;line-height:1.65}
+    .ia-lista{padding-left:13px;margin:0}
+    .ia-lista li{font-size:9.5px;color:#334155;line-height:1.75}
+
+    /* SESSÕES */
+    .sess-titulo{font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:1px;padding:10px 28px 6px;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:8px}
+    .sess-badge{background:#eff6ff;color:#2563EB;font-size:8px;font-weight:800;padding:2px 8px;border-radius:20px}
+    .sess-row{display:flex;gap:12px;padding:8px 28px;border-bottom:1px solid #f1f5f9;page-break-inside:avoid;align-items:baseline}
+    .sess-row:last-child{border-bottom:none}
+    .sess-meta{flex-shrink:0;min-width:110px}
+    .sess-num{font-size:9.5px;font-weight:800;color:#2563EB;display:block}
+    .sess-data{font-size:8.5px;color:#94a3b8;display:block;margin-top:1px}
+    .sess-resumo{font-size:9.5px;color:#334155;line-height:1.7;flex:1}
+
+    /* RODAPÉ */
+    .ftr{border-top:2px solid #2563EB;padding:12px 28px;display:flex;justify-content:space-between;align-items:flex-end;background:#fafbff;margin-top:12px}
+    .ass-linha{border-top:1px solid #cbd5e1;padding-top:5px;margin-top:28px;min-width:180px}
+    .ass-nome{font-size:10px;font-weight:700;color:#1e293b}
+    .ass-reg{font-size:9px;color:#64748b;margin-top:1px}
+    .ftr-info{text-align:right;font-size:8px;color:#94a3b8;line-height:1.9}
+
+    @media print{
+      body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .ia-bloco,.sess-row{page-break-inside:avoid}
+    }
+  </style></head><body>
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-logo">${nomeClinica}</div>
+      <div class="hdr-sub">Relatório de Acompanhamento Terapêutico</div>
+    </div>
+    <div class="hdr-right">
+      ${profNome?`<div><strong>${profNome}</strong></div>`:''}
+      ${crp?`<div>${crp}</div>`:''}
+      <div style="opacity:.6">${dataGeracao}</div>
+    </div>
+  </div>
+
+  <div class="faixa">
+    <div class="faixa-pac">${pacNome}</div>
+    <div class="faixa-meta">
+      <div class="faixa-item"><label>Período</label><span>${periodoLabel}</span></div>
+      <div class="faixa-item"><label>Sessões</label><span>${totalSess}</span></div>
+      ${crp?`<div class="faixa-item"><label>Registro</label><span>${crp}</span></div>`:''}
+    </div>
+  </div>
+
+  ${blocoIA}
+
+  ${sessoesHTML ? `
+  <div class="sess-titulo">
+    Últimas Sessões
+    <span class="sess-badge">${hist.filter(h=>h.resumo_ia||h.evolucao).length} de ${totalSess}</span>
+  </div>
+  ${sessoesHTML}` : ''}
+
+  <div class="ftr">
+    <div>
+      <div class="ass-linha">
+        <div class="ass-nome">${profNome}</div>
+        ${crp?`<div class="ass-reg">${crp}</div>`:''}
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div class="ass-linha" style="min-width:160px">
+        <div class="ass-reg" style="text-align:center">Assinatura</div>
+      </div>
+    </div>
+    <div class="ftr-info">
+      <div>${nomeClinica}</div>
+      <div>${dataGeracao}</div>
+      <div style="font-size:7.5px;color:#cbd5e1">Documento confidencial — uso clínico exclusivo</div>
     </div>
   </div>
 
@@ -4584,68 +4677,6 @@ function imprimirRelatorio(){
   w.document.close();
 }
 
-
-function renderAbaPlano() {
-  const body = document.getElementById('cfg-plano-body');
-  const usoBody = document.getElementById('cfg-uso-body');
-  if (!body) return;
-
-  if (!planoAtual || !usuarioDB) {
-    body.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><p>Dados do plano não disponíveis</p></div>';
-    return;
-  }
-
-  const usados = usuarioDB.relatorios_gerados_mes || 0;
-  const limite = planoAtual.limite_relatorios >= 999999 ? null : planoAtual.limite_relatorios;
-  const pct = limite ? Math.min(100, Math.round((usados / limite) * 100)) : 0;
-  const corBarra = pct >= 90 ? 'var(--danger)' : pct >= 70 ? 'var(--warn)' : 'var(--accent)';
-
-  body.innerHTML = `
-    <div style="display:flex;align-items:center;gap:20px;padding:16px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:12px;margin-bottom:16px">
-      <div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--p1),var(--accent));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">💎</div>
-      <div>
-        <div style="font-size:18px;font-weight:800;color:var(--text)">${planoAtual.nome}</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:2px">R$ ${(planoAtual.preco_mensal||0).toFixed(2)}/mês</div>
-      </div>
-      <div style="margin-left:auto;text-align:right">
-        <div style="font-size:11px;color:var(--text3)">Relatórios/mês</div>
-        <div style="font-size:16px;font-weight:800;color:var(--p3)">${limite ? limite : '∞'}</div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--text3);line-height:1.8">
-      <div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--accent)">✓</span> Pacientes ilimitados</div>
-      <div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--accent)">✓</span> Agenda visual completa</div>
-      <div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--accent)">✓</span> Sessões e pagamentos</div>
-      <div style="display:flex;gap:8px"><span style="color:var(--accent)">✓</span> ${limite ? limite + ' relatórios IA por mês' : 'Relatórios IA ilimitados'}</div>
-    </div>
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <p style="font-size:12px;color:var(--text3)">Para fazer upgrade ou cancelar, entre em contato:</p>
-      <a href="mailto:contato@catherflow.com.br" style="color:var(--p3);font-size:13px;font-weight:600">contato@catherflow.com.br</a>
-    </div>`;
-
-  // Uso este mês
-  if (usoBody) {
-    usoBody.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div style="background:rgba(37,99,235,.06);border-radius:10px;padding:14px;text-align:center">
-          <div style="font-size:28px;font-weight:800;color:var(--p3)">${usados}</div>
-          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-top:4px">Relatórios gerados</div>
-        </div>
-        <div style="background:rgba(16,185,129,.06);border-radius:10px;padding:14px;text-align:center">
-          <div style="font-size:28px;font-weight:800;color:var(--accent)">${limite ? limite - usados : '∞'}</div>
-          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-top:4px">Disponíveis</div>
-        </div>
-      </div>
-      ${limite ? `
-      <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
-        <span>Uso mensal</span><span style="font-weight:700;color:${corBarra}">${pct}%</span>
-      </div>
-      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${corBarra};transition:.5s;border-radius:4px"></div>
-      </div>
-      <p style="font-size:11px;color:var(--text4);margin-top:8px">O contador reseta no dia 1º de cada mês.</p>` : ''}`;
-  }
-}
 
 function cfgTab(aba, el){
   document.querySelectorAll('.cfg-tab').forEach(t=>t.classList.remove('active'));
@@ -4949,20 +4980,28 @@ function aplicarFoto(src){
 function inicializarFiltroMes(){
   const sel = document.getElementById('fin-filtro-mes');
   if(!sel) return;
-  // Meses dos últimos 12 meses + opção "Tudo"
-  const meses = [];
   const hoje = new Date();
-  for(let i=0; i<12; i++){
+  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  // Só exibe meses que têm sessões registradas (+ mês atual sempre)
+  const mesesComSessoes = new Set(
+    sessoes.map(s=>s.data_sessao?.substring(0,7)).filter(Boolean)
+  );
+  mesesComSessoes.add(mesAtual);
+  // Últimos 6 meses filtrados pelos que existem dados
+  const meses = [];
+  for(let i=0; i<6; i++){
     const d = new Date(hoje.getFullYear(), hoje.getMonth()-i, 1);
     const val = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    const label = d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-    meses.push({val, label});
+    if(mesesComSessoes.has(val)){
+      const label = d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+      meses.push({val, label});
+    }
   }
+  const currentVal = sel.value;
   sel.innerHTML = '<option value="tudo">Todo o período</option>' +
     meses.map(m=>`<option value="${m.val}">${m.label}</option>`).join('');
-  // Seleciona mês atual por padrão
-  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
-  sel.value = mesAtual;
+  // Mantém seleção atual ou vai para mês atual
+  sel.value = (currentVal && [...sel.options].some(o=>o.value===currentVal)) ? currentVal : mesAtual;
 }
 
 function renderFinanceiro(){
@@ -4970,34 +5009,39 @@ function renderFinanceiro(){
   inicializarFiltroMes();
   const periodo = document.getElementById('fin-filtro-mes')?.value || 'tudo';
   const filtroPgto = document.getElementById('fin-filtro-pgto')?.value || '';
+  // Usa valor padrão da configuração quando sessão não tem valor definido
+  let cfgValor = 0;
+  try { cfgValor = parseFloat(JSON.parse(localStorage.getItem('cf_config')||'{}').valor_sessao)||0; } catch(e){}
 
-  // Filtra sessões pelo período
-  let sessFiltradas = sessoes.filter(s => s.valor && parseFloat(s.valor) > 0);
-  if(periodo !== 'tudo'){
-    sessFiltradas = sessFiltradas.filter(s => s.data_sessao?.startsWith(periodo));
-  }
+  // Filtra sessões — inclui sessões sem valor usando o padrão
+  let sessFiltradas = sessoes.filter(s => {
+    const v = parseFloat(s.valor) || cfgValor;
+    return v > 0;
+  });
+  if(periodo !== 'tudo') sessFiltradas = sessFiltradas.filter(s => s.data_sessao?.startsWith(periodo));
   if(filtroPgto) sessFiltradas = sessFiltradas.filter(s => s.status_pagamento === filtroPgto);
 
   // KPIs
-  const total = sessFiltradas.reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
-  const pago = sessFiltradas.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+  const total = sessFiltradas.reduce((t,s)=>t+(parseFloat(s.valor)||cfgValor),0);
+  const pago = sessFiltradas.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||cfgValor),0);
   const pendente = total - pago;
-  const ticket = sessFiltradas.length ? total / sessFiltradas.length : 0;
   const pctPago = total > 0 ? Math.round((pago/total)*100) : 0;
   const qtPendente = sessFiltradas.filter(s=>s.status_pagamento!=='pago').length;
 
   document.getElementById('fin-kpi-total').textContent = total.toFixed(2);
   document.getElementById('fin-kpi-pago').textContent = pago.toFixed(2);
   document.getElementById('fin-kpi-pendente').textContent = pendente.toFixed(2);
-  document.getElementById('fin-kpi-ticket').textContent = ticket.toFixed(2);
   document.getElementById('fin-kpi-sessoes-label').textContent = sessFiltradas.length + ' sessões';
-  document.getElementById('fin-kpi-pago-pct').textContent = pctPago + '% do total recebido';
-  document.getElementById('fin-kpi-pendente-qt').textContent = qtPendente + ' sessões pendentes';
+  document.getElementById('fin-kpi-pago-pct').textContent = pctPago + '% recebido';
+  document.getElementById('fin-kpi-pendente-qt').textContent = qtPendente + (qtPendente===1?' sessão':' sessões');
+  // Oculta KPI pendente se for zero
+  const cardPendKpi = document.getElementById('fin-kpi-card-pendente');
+  if(cardPendKpi) cardPendKpi.style.display = pendente > 0 ? '' : 'none';
 
   // Label período
   const labelEl = document.getElementById('fin-periodo-label');
   if(labelEl){
-    if(periodo==='tudo') labelEl.textContent='— Todo o período';
+    if(periodo==='tudo') labelEl.textContent='';
     else {
       const [y,m] = periodo.split('-');
       const d = new Date(parseInt(y), parseInt(m)-1, 1);
@@ -5005,10 +5049,11 @@ function renderFinanceiro(){
     }
   }
 
-  // Extrato por paciente
+  // Extrato por paciente — inclui sessões sem valor usando padrão
   const grupos = {};
   sessoes.filter(s => {
-    if(!s.valor || parseFloat(s.valor)<=0) return false;
+    const v = parseFloat(s.valor) || cfgValor;
+    if(v <= 0) return false;
     if(periodo!=='tudo' && !s.data_sessao?.startsWith(periodo)) return false;
     return true;
   }).forEach(s=>{
@@ -5018,14 +5063,13 @@ function renderFinanceiro(){
 
   const divExt = document.getElementById('fin-extrato-pacientes');
   if(!Object.keys(grupos).length){
-    divExt.innerHTML='<div class="empty"><div class="empty-icon">💰</div><p>Nenhuma sessão com valor registrado neste período</p></div>';
+    divExt.innerHTML='<div class="empty"><div class="empty-icon">💰</div><p>Nenhuma sessão registrada neste período</p></div>';
   } else {
-    // Ordena por pendente desc
     const linhas = Object.keys(grupos).map(pid=>{
       const p = pacientes.find(x=>x.id==pid);
       const ss = grupos[pid];
-      const tPago = ss.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
-      const tPend = ss.filter(s=>s.status_pagamento!=='pago').reduce((t,s)=>t+(parseFloat(s.valor)||0),0);
+      const tPago = ss.filter(s=>s.status_pagamento==='pago').reduce((t,s)=>t+(parseFloat(s.valor)||cfgValor),0);
+      const tPend = ss.filter(s=>s.status_pagamento!=='pago').reduce((t,s)=>t+(parseFloat(s.valor)||cfgValor),0);
       const tTotal = tPago + tPend;
       const pct = tTotal>0 ? Math.round((tPago/tTotal)*100) : 0;
       return {pid, p, ss, tPago, tPend, tTotal, pct};
@@ -5033,8 +5077,8 @@ function renderFinanceiro(){
 
     divExt.innerHTML = `<div class="table-wrap"><table>
       <thead><tr>
-        <th>Paciente</th><th>Sessões</th><th>Total</th>
-        <th>Recebido</th><th>Pendente</th><th>Status</th><th>Ações</th>
+        <th>Paciente</th><th>Sessões</th><th>Faturado</th>
+        <th>Recebido</th><th>Pendente</th><th></th><th>Ações</th>
       </tr></thead>
       <tbody>${linhas.map(({pid,p,ss,tPago,tPend,tTotal,pct})=>`
         <tr class="row-clickable" onclick="abrirDetalhePaciente(${pid})">
@@ -5042,10 +5086,10 @@ function renderFinanceiro(){
           <td><span class="badge badge-purple">${ss.length}</span></td>
           <td><strong>R$ ${tTotal.toFixed(2)}</strong></td>
           <td style="color:var(--accent);font-weight:700">R$ ${tPago.toFixed(2)}</td>
-          <td style="color:${tPend>0?'var(--warn)':'var(--text3)'};font-weight:700">R$ ${tPend.toFixed(2)}</td>
+          <td style="color:${tPend>0?'var(--warn)':'var(--text3)'};font-weight:700">${tPend>0?'R$ '+tPend.toFixed(2):'—'}</td>
           <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="flex:1;min-width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:52px;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
                 <div style="height:100%;width:${pct}%;background:var(--accent);transition:.3s"></div>
               </div>
               <span style="font-size:11px;font-weight:700;color:${pct===100?'var(--accent)':'var(--text3)'}">${pct}%</span>
@@ -5059,10 +5103,10 @@ function renderFinanceiro(){
     </table></div>`;
   }
 
-  // Sessões pendentes de pagamento
+  // Pendentes — card só aparece se houver
   const pendentes = sessoes.filter(s=>
     s.status_pagamento!=='pago' &&
-    s.valor && parseFloat(s.valor)>0 &&
+    (parseFloat(s.valor)||cfgValor)>0 &&
     (periodo==='tudo' || s.data_sessao?.startsWith(periodo))
   ).sort((a,b)=>a.data_sessao?.localeCompare(b.data_sessao||'')||0);
 
@@ -5073,14 +5117,14 @@ function renderFinanceiro(){
   } else {
     if(cardPend) cardPend.style.display='block';
     divPend.innerHTML = `<div class="table-wrap"><table>
-      <thead><tr><th>Data</th><th>Paciente</th><th>Valor</th><th>Tipo</th><th>Ação</th></tr></thead>
+      <thead><tr><th>Data</th><th>Paciente</th><th>Valor</th><th>Ação</th></tr></thead>
       <tbody>${pendentes.map(s=>{
         const p = pacientes.find(x=>x.id==s.paciente_id);
+        const v = parseFloat(s.valor)||cfgValor;
         return`<tr>
           <td>${fmtDate(s.data_sessao)}</td>
           <td><strong>${p?.nome||'—'}</strong></td>
-          <td style="font-weight:700;color:var(--warn)">R$ ${(parseFloat(s.valor)||0).toFixed(2)}</td>
-          <td><span class="${s.tipo_sessao==='online'?'tipo-online':'tipo-presencial'}">${s.tipo_sessao||'presencial'}</span></td>
+          <td style="font-weight:700;color:var(--warn)">R$ ${v.toFixed(2)}</td>
           <td><button class="btn-sm" onclick="marcarSessaoPaga(${s.id})" style="font-size:11px">✅ Marcar pago</button></td>
         </tr>`;
       }).join('')}</tbody>
